@@ -1,0 +1,25 @@
+#c { /* Countdown Text on "query.html"*/
+  font-size: 4em;
+  font-family: courier,monospace;
+  margin-top: -20px;
+}
+.btn {
+    padding: 6px 6px 6px 6px;
+    width: 80px;
+    color: white;
+    text-align: center;
+    cursor: pointer;
+}
+.btn-up { /* Unpressed Button */
+  background-color: blue;
+}
+.btn-p { /* Pressed Button */
+  background-color: gray;
+}
+a {
+  background-color: blue;
+  text-decoration: none;
+}
+#danger { /* Warning Coloration for the LEAK INFORMATION button */
+  background-color: red;
+}
