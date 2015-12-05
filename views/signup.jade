@@ -1,0 +1,16 @@
+extends layout
+block content
+  h1= title
+  - if (title === 'Sign-Up') {
+    - if (error === 'name_in_use') {
+    p#problem Sorry! The name you entered is already in use.
+    - } else if (error === 'email_in_use') {
+    p#problem Sorry! The email address you entered is already in use.
+    - } else if (error === 'unknown') {
+    p#problem Sorry! An unknown problem happened. Please try again.
+    - }
+    h3 Sign up for the next game of Assassins here!
+    include partials/content/signupform.jade
+  - } else if (title === 'You Have Signed Up!') {
+    h3 Thank you! You will receive an email with instructions once the game begins.
+  - }

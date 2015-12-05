@@ -1,0 +1,14 @@
+extends layout
+block content
+  h1= title
+  - if (title === 'Unregister') {
+    - if (error === 'key_not_found') {
+    p#problem Sorry! The key you entered could not be found in our database.
+    - } else if (error === 'unknown') {
+    p#problem Whoops! Something went wrong. Please try again.
+    }
+  h3 If you would like to unregister from the next game of Assassins, please enter the key you received via email here.
+  include partials/content/unregisterform.jade
+  - } else if (title === 'Unregistration Successful') {
+  h3 You have successfully unregistered from the next game of Assassins.
+  - }

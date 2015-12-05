@@ -1,0 +1,9 @@
+@import url('https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css');
+#c { /* Countdown Text on "query.html"*/
+  font-size: 4em;
+  font-family: courier,monospace;
+  margin-top: -10px;
+}
+#problem {
+  background-color: red;
+}
