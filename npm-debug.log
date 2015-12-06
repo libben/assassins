@@ -7,8 +7,8 @@
 6 silly lifecycle Assassins@0.0.1~prestart: no script for prestart, continuing
 7 info lifecycle Assassins@0.0.1~start: Assassins@0.0.1
 8 verbose lifecycle Assassins@0.0.1~start: unsafe-perm in lifecycle true
-9 verbose lifecycle Assassins@0.0.1~start: PATH: /usr/lib/node_modules/npm/bin/node-gyp-bin:/home/ben/Web/Assassins/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/lib/jvm/default/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/home/ben/.gem/ruby/2.2.0/bin:/home/ben/.node_modules/bin
-10 verbose lifecycle Assassins@0.0.1~start: CWD: /home/ben/Web/Assassins
+9 verbose lifecycle Assassins@0.0.1~start: PATH: /usr/lib/node_modules/npm/bin/node-gyp-bin:/home/ben/Web/libben.github.io/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/lib/jvm/default/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/home/ben/.gem/ruby/2.2.0/bin:/home/ben/.node_modules/bin
+10 verbose lifecycle Assassins@0.0.1~start: CWD: /home/ben/Web/libben.github.io
 11 silly lifecycle Assassins@0.0.1~start: Args: [ '-c', 'node ./bin/www' ]
 12 silly lifecycle Assassins@0.0.1~start: Returned: code: 1  signal: null
 13 info lifecycle Assassins@0.0.1~start: Failed to exec start script
@@ -23,7 +23,7 @@
 14 verbose stack     at maybeClose (internal/child_process.js:818:16)
 14 verbose stack     at Process.ChildProcess._handle.onexit (internal/child_process.js:211:5)
 15 verbose pkgid Assassins@0.0.1
-16 verbose cwd /home/ben/Web/Assassins
+16 verbose cwd /home/ben/Web/libben.github.io
 17 error Linux 4.2.5-1-ARCH
 18 error argv "/usr/local/bin/node" "/usr/bin/npm" "start"
 19 error node v4.2.1
