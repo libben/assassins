@@ -4,14 +4,14 @@ Automated administrator for games of [Assassin](https://en.wikipedia.org/wiki/As
 
 ###What you need:
 
-1. Couchdb server with a database called "Assassins" for storing players
+1. CouchDB server with a database called "Assassins" for storing players
 
 2. RabbitMQ server
 
 3. Node.js (installed globally)
 
-Start both of those servers, change to your repository directory, then fire up your node server with
-`$ DEBUG=libben.github.io:* npm start`
+Start your CouchDB and RabbitMQ servers, go to your project directory, then fire up your Node.js server with
+`DEBUG=libben.github.io:* npm start`
 
 ### Known bugs:
 app.locals is not recognized as a valid property in /routes/index.js, though
