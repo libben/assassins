@@ -3,7 +3,7 @@ table
     td
       a(href='/',class='btn btn-default') Home
     // insert conditional: show different links if game is on or off.
-    - if (game_on) {
+    - if (game_on === true) {
     td
       a(href='/info',class='btn btn-default') Get Target Information
     td

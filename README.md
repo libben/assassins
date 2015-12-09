@@ -14,8 +14,7 @@ Start your CouchDB and RabbitMQ servers, go to your project directory, then fire
 `DEBUG=libben.github.io:* npm start`
 
 ### Known bugs:
-app.locals is not recognized as a valid property in /routes/index.js, though
-it is recognized just fine in /bin/www
+Changing app.locals.game_on from /bin/www does not affect which routing file is used as I hoped it would. This is probably due to some property of Express.js I don't know about; fret not, there's a few things I can think of to try to work around this problem.
 
 ### Next big project: set up automated outbound email.
 

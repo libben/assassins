@@ -13,8 +13,6 @@ var open = require('amqplib').connect('amqp://localhost');
 var db = new(cradle.Connection)().database('assassins');
 var eventEmitter = new events.EventEmitter();
 
-console.log('It is ' + app.locals.game_on);
-
 /*
  * Get port from environment and store in Express.
  */
@@ -80,8 +78,9 @@ eventEmitter.on('start_timer', function() {
     io.sockets.emit('count_update', count);
     console.log('emmitted count_update to frontend');
     count = count - 1;
-    if (count < 0) {
-      app.locals.game_on = true;
+    if (count < 1) {
+      app.locals.game_on = 1;
+      console.log('Changed app.locals.game_on to ' + app.locals.game_on);
       clearInterval(counter);
       io.sockets.emit('game_on', null);
     }

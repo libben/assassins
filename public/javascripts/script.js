@@ -10,7 +10,6 @@ $(document).ready(function(){
   socket.on('game_on', function() {
     var timey = document.getElementById('countdown_text');
     timey.parentNode.removeChild(timey); // Stack Overflow says javascipt permits infanticide, but not suicide, that's why it's like this
-    location.reload();
   });
   $('.Unpressed').click(function(){
     if (document.getElementById('querybutton').classList[2] === 'Unpressed') {
