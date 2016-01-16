@@ -1,18 +1,19 @@
 table
   tr
     td
-      a(href='/',class='btn btn-default') Home
+      a(href='/#{req.params.id}/',class='btn btn-default') Home
     // insert conditional: show different links if game is on or off.
     - if (game_on === true) {
     td
-      a(href='/info',class='btn btn-default') Get Target Information
+      a(href='/#{req.params.id}/info',class='btn btn-default') Get Target Information
     td
-      a(href='/report',class='btn btn-default') Report a Kill
+      a(href='/#{req.params.id}/report',class='btn btn-default') Report a Kill
     td
-      a(href='/leak',class='btn btn-danger') LEAK INFORMATION
+      a(href='/#{req.params.id}/leak',class='btn btn-danger') LEAK INFORMATION
     - } else {
     td
-      a(href='/signup',class='btn btn-default') Sign Up For Next Game
+      a(href='/#{req.params.id}/signup',class='btn btn-default') Sign Up For Next Game
     td
-      a(href='/unregister',class='btn btn-default') Unregister From Next Game
+      a(href='/#{req.params.id}/unregister',class='btn btn-default') Unregister From Next Game
     - }
+// I hope I can pass the parameter in the above way.

@@ -10,8 +10,8 @@ var http = require('http');
 var events = require('events');
 var cradle = require('cradle');
 var open = require('amqplib').connect('amqp://localhost');
-var db = new(cradle.Connection)().database('assassins');
-var eventEmitter = new events.EventEmitter();
+//var db = new(cradle.Connection)().database('assassins'); // This will be altered under the new structure.
+var event_emitter = new events.EventEmitter();
 
 /*
  * Get port from environment and store in Express.
@@ -38,7 +38,7 @@ open.then(function(conn) { // Remember, this receiver is opened before the sende
    ch.consume(q, function(msg) {
      console.log(" [x] Received %s", msg.content.toString());
      if (msg.content.toString() === 'start_timer') {
-       eventEmitter.emit('start_timer');
+       event_emitter.emit('start_timer');
        console.log('I emitted start_timer as an event.');
      }
      ch.ack(msg); // Acknowledge receipt of message
@@ -60,9 +60,9 @@ io.on('connection', function(socket){
   socket.on('join', function(data) {
     console.log('user joined and says, \'' + data + '\'');
   });
-  socket.on('query', function(data) {
+  /*socket.on('query', function(data) {
     console.log('Received ' + data);
-    db.get(data, function (err, doc) {
+    db.get(data, function (err, doc) {      This block of code no longer is applicable under the new strucure. Keeping it here until I write a suitable replacement.
       console.log(doc.name);
       console.log(doc.killword);
       socket.emit('response', {
@@ -70,19 +70,19 @@ io.on('connection', function(socket){
         killword: doc.killword
       });
     });
-  });
+  });*/
 });
-eventEmitter.on('start_timer', function() {
+event_emitter.on('start_timer', function() {
   var count = 20; //CHANGE
   var counter = setInterval(function () {
     io.sockets.emit('count_update', count);
     console.log('emmitted count_update to frontend');
     count = count - 1;
     if (count < 1) {
-      app.locals.game_on = 1;
-      console.log('Changed app.locals.game_on to ' + app.locals.game_on);
+      //app.locals.game_on = 1;     // These also will be replaced
+      //console.log('Changed app.locals.game_on to ' + app.locals.game_on);
       clearInterval(counter);
-      io.sockets.emit('game_on', null);
+      io.sockets.emit('game_on', null); // In fact, this whole sector will be altered to only emit to the right sockets
     }
   }, 1000);
 });

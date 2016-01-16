@@ -4,7 +4,7 @@ Automated administrator for games of [Assassin](https://en.wikipedia.org/wiki/As
 
 ###What you need:
 
-1. CouchDB server with a database called "Assassins" for storing players
+1. CouchDB server (databases needs currently under review)
 
 2. RabbitMQ server
 
@@ -14,10 +14,10 @@ Start your CouchDB and RabbitMQ servers, go to your project directory, then fire
 `DEBUG=libben.github.io:* npm start`
 
 ### Known bugs:
-Changing app.locals.game_on from /bin/www does not affect which routing file is used as I hoped it would. This is probably due to some property of Express.js I don't know about; fret not, there's a few things I can think of to try to work around this problem.
+none atm, I'm deep into changing the structure so it wouldn't run as-is anyway.
 
-### Next big project: set up automated outbound email.
+Ok, it's time for a restructure. Here we go. (A) move game_on to be a property within the database. Instantiate by using routing with /[pattern]/page with each instance having a different collection in the database.
 
-### Note to self:
-For goodness' sake, learn Git, Ben.
-http://www.git-scm.com/book/en/v2
+Thus begins the great conversion from req.app to res for information storage within requests.
+
+Current next step: restructure index.jade to fit the parameters its being sent.
