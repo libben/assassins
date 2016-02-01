@@ -1,18 +1,3 @@
 extends layout
-block header
-//- empty header means no links to game-related activities at the top of home page
 block content
   h1= title
-  h3 Create a Game
-  - if (error !== false) {
-    - if (error === 'email_in_use') {
-      p#problem Sorry! The email address you entered is already linked to a game in progress. Please use another, or wait until your current game is over. Thanks!
-    - } else if (error === 'unknown') {
-      include partials/content/unknownproblem.jade
-  - }
-  - if (new_game_id !== null) {
-    include partials/content/gameiddisplay.jade
-  - } else if (new_game_id === null) {
-    // This above if statement is just to check that when this is first being accessed, the variable will be recognized as being null.
-    include partials/content/newgameform.jade
-  - } 

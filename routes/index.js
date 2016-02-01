@@ -3,99 +3,113 @@ var router = express.Router();
 var http = require('http');
 var cradle = require('cradle');
 var events = require('events');
-var open = require('amqplib').connect('amqp://localhost');
-var event_emitter = new events.EventEmitter();
+module.exports.event_emitter = new events.EventEmitter(); // WATCH THIS, SEE IF IT WORKS
 var c = new(cradle.Connection);
-
-event_emitter.on('game_countdown', function() {
-  open.then(function(conn) {
-    ok = conn.createChannel(); // I should come up with a new name for this variable. 'ok', though concise, gives no information.
-    ok = ok.then(function(ch) {
-      var q = 'sockety';
-      ch.assertQueue(q, {durable: false});
-      ch.sendToQueue(q, new Buffer('start_timer'));
-      console.log(" [x] Sent 'start_timer'");
-    });
-  });
-});});
 
 /* GET home page. */
 router.get('/', function(req, res) {
-  res.render('index', {
+  res.render('creator', {
     title: 'Create',
     new_game_id: null,
     error: false
   });
 });
 /* POST home page */
-router.post('/', function(req,res) {
-  //req.app.locals.comp = true; < I thought I needed this, but I can get by evaluating completion based on if there were any errors submitting the request or not
+router.post('/', function(req, res) {
+  //res.app.locals.comp = true; < I thought I needed this, but I can get by evaluating completion based on if there were any errors submitting the request or not
   res.locals.err = false; // replace these properties of the app with database calls?
   res.locals.new_game_id = null; // This is null at the start. I don't want it to show up as undefined down the road and give me a hassle. It will only be called upon if the new game database is successfully created.
   res.locals.title = 'Create';
   var db = c.database('instances');
-  db.view('all/all', function (err, res) {
+  db.view('all/ids_and_emails', function (err, resp) { // REMEMBER: 'res' is what we call the response for the entire route. Any responses given while retrieving the route must be given different names.
     if (err) {
       res.locals.err = 'unknown';
       console.log('Set err to unknown');
+      module.exports.event_emitter.emit('proceed_to_completion'); // ignoring DRY here a bit, but it works for the time being.
+      console.log('I emitted proceed_to_completion.');
     } else {
-      res.forEach(function (row) {
-        if (row.email === req.body.email) {
+      resp.forEach(function (value) {
+        console.log(value);
+        if (value === String(req.body.email)) {
           res.locals.err = 'email_in_use';
           console.log('Set err to email_in_use');
         }
       });
+      module.exports.event_emitter.emit('proceed_to_completion');
+      console.log('I emitted proceed_to_completion.');
     }
-    event_emitter.emit('proceed_to_completion');
-    console.log('I emitted proceed_to_completion.');
   });
-  event_emitter.on('proceed_to_completion', function(){
-    if (res.locals.err = false) {
+  module.exports.event_emitter.on('proceed_to_completion', function(){
+    if (res.locals.err === false) {
       db.get('game_counter', function (err, doc) {
-        console.log('game_counter reads ' + doc.val); // Remember to save the incrementally increasing property as 'val' when you create the database 'instances' with the document 'game_counter'
+        console.log('game_counter reads ' + doc.val); // Remember to save the incrementally increasing property as 'val' when you create the database 'instances' with the document 'game_counter' [COMPLETE]
         var number_of_games = Number(doc.val) + 1;
-        db.merge('game_counter', {val: number_of_games}, function (err, res) {
+        db.merge('game_counter', {val: number_of_games}, function (err, resp) {
           if (err) {
             res.locals.error = 'unknown';
           }
         });
-        var new_database = c.database(p);
+        db.save(String(number_of_games), {
+          email: req.body.email
+        }, function(err, resp) {
+          res.locals.error = 'unknown';
+        });
+        var new_database = c.database('game_' + String(number_of_games)); // CouchDB does not permit databases beginning with numbers. Thus, I must call upon these by starting them with 'game_'.
         new_database.create();
-        new_database.save('_design/all'), {
+        console.log('new_database created.');
+        new_database.save('_design/all', {
           views: {
             user_list: { // Will probably have more default views being generated here as I develop further.
-              map: 'function (doc) { if (doc.name) { emit(doc, null) } }'; // I like keeping this all as one line. Makes things concise.
+              map: 'function (doc) { if (doc.name) { emit(doc, null) } }' // I like keeping this all as one line. Makes things concise.
             }
           }
+        });
+        new_database.save('game_on', { // Creates document 'game_on' with property 'val' set to 0
+          val: 0
+        }, function(err, res) {
+          if (err) {
+            // Handle error
+          }
+        });
+        if (res.locals.err === false) {
+          res.locals.title = 'Success';
+          res.locals.new_game_id = number_of_games;
         }
-        res.locals.new_game_id = number_of_games;
-        res.locals.title = 'Success';
+        module.exports.event_emitter.emit('render'); // Ignoring DRY again here
       });
+    } else {
+      module.exports.event_emitter.emit('render');
     }
   });
-  res.render('index', {
-    title: res.locals.title,
-    new_game_id: res.locals.new_game_id,
-    error: res.locals.err
-  })
+  module.exports.event_emitter.on('render', function() {
+    res.render('creator', {
+      title: res.locals.title,
+      new_game_id: res.locals.new_game_id,
+      error: res.locals.err
+    });
+  });
 });
-router.get('/:in', function(req, res) { // LAST TIME YOU LEFT OFF YOU WERE ABOUT TO MAKE A HOME PAGE
+router.get('/:game_id', function(req, res) {
   res.render('landing', {
-    title: 'Landing Page'
+    title: 'Landing Page',
+    game_id: req.params.game_id
   });
 });
-router.get('/:in/unregister', function(req, res) {
+
+/*                                          // Unregistration will be added at a later point, after emailing is set up
+router.get('/:game_id/unregister', function(req, res) {
   res.render('info', {
-    title: 'Unregister'
+    title: 'Unregister',
+    game_id: req.params.game_id
   });
 });
-/*
-router.post('/:in/unregister', function(req, res) { // Unregistration will need re-tooling
+
+router.post('/:game_id/unregister', function(req, res) { // Unregistration will need re-tooling
   var n = 0;
   var page_title = 'Unregister';
   db.view('all/all', function (err, resp) {
     resp.forEach(function (key,row) {
-      if (req.body.unregister_key === key.unregister_key) { // Need to auto-generate unregister_key on signup
+      if (req.body.unregister_key === key.unregister_key) {
         n++;
         db.remove(key._id, function (err, res) {
           if (err) {
@@ -117,33 +131,37 @@ router.post('/:in/unregister', function(req, res) { // Unregistration will need 
 });
 */
 
-router.get('/:in/signup', function(req, res) {
+router.get('/:game_id/signup', function(req, res) {
   res.render('signup', {
     title: 'Sign-Up',
-    game_id: req.params.in
+    game_id: req.params.game_id
   });
 });
-router.post('/:in/signup', function(req, res) {
-  var db = c.database(req.params.in);
+router.post('/:game_id/signup', function(req, res) {
+  var db = c.database('game_' + req.params.game_id);
   res.locals.user_id = (Math.floor((Math.random() * 10000000000))).toString();
   res.locals.unreg_key = (Math.floor((Math.random() * 10000000000))).toString();
   var obj = {};
   var page_title = 'Sign-Up';
   db.view('all/user_list', function (err, resp) {
-    resp.forEach(function (key,row) {
-      obj[key._id] = 1; // Arbitrarily picked 1 as the value here; it's not relevent. I just need the id to show up as part of this faux-hash. > {"3488842": 1}
-      obj[key.unregister_key] = 1;
-      if (key.name === req.body.name.trim()) {
-        res.locals.submit_error = 'name_in_use';
-        console.log('Error thrown - name in use');
-      } else if (key.email === req.body.email.toLowerCase().trim()) {
-        res.locals.submit_error = 'email_in_use';
-        console.log('Error thrown - email in use');
-      }
-    });
-    event_emitter.emit('success_conditional');
+    if (err) {
+      // Handle Error
+    } else {
+      resp.forEach(function (key) { // Had (key,row) but I don't think I need 'row'
+        obj[key._id] = 1; // Arbitrarily picked 1 as the value here; it's not relevent. I just need the id to show up as part of this faux-hash. > {"3488842": 1}
+        obj[key.unregister_key] = 1;
+        if (key.name === req.body.name.trim()) {
+          res.locals.submit_error = 'name_in_use';
+          console.log('Error thrown - name in use');
+        } else if (key.email === req.body.email.toLowerCase().trim()) {
+          res.locals.submit_error = 'email_in_use';
+          console.log('Error thrown - email in use');
+        }
+      });
+      module.exports.event_emitter.emit('success_conditional');
+    }
   });
-  event_emitter.on('success_conditional', function() {
+  module.exports.event_emitter.on('success_conditional', function() {
     if (res.locals.submit_error === undefined) {
       while (obj[res.locals.user_id]) { // This set of two similar loops may ignore DRY conventions
           res.locals.user_id = (Math.floor((Math.random() * 10000000000))).toString();
@@ -160,16 +178,16 @@ router.post('/:in/signup', function(req, res) {
           console.log(err);
           res.locals.unknown_problem = true; // potentially inefficient code here.
         }
-        event_emitter.emit('game_ready_check');
+        module.exports.event_emitter.emit('game_ready_check');
       });
-      event_emitter.on('game_ready_check', function() {
-        db.view('all/user_list', function(err, res) { // If there are 10 people signed up, start the countdown to the beginning of the game.
-          if (res.length > 9) { // 9 is not a value set in stone. I am seriously thinking it would be a good idea to make this a property in the database, choosable when you create your instance.
-            event_emitter.emit('game_countdown');
+      module.exports.event_emitter.on('game_ready_check', function() {
+        db.view('all/user_list', function(err, resp) { // If there are 10 people signed up, start the countdown to the beginning of the game.
+          if (resp.length > 9) { // 9 is not a value set in stone. I am seriously thinking it would be a good idea to make this a property in the database, choosable when you create your instance.
+            module.exports.event_emitter.emit('game_countdown', req.params.game_id);
             console.log('I emitted \'game_countdown\'');
           }
         });
-      });q.app
+      });
       if (res.locals.unknown_problem) {
         res.locals.submit_error = 'unknown';
         page_title = 'Sign-Up';
@@ -181,28 +199,51 @@ router.post('/:in/signup', function(req, res) {
     }
     res.render('signup', {
       title: page_title,
-      error: res.locals.submit_error
+      error: res.locals.submit_error,
+      game_id: req.params.game_id
     });
   });
 });
 // Routes when the game is on
-router.get('/:in/info', function(req, res) {
+router.get('/:game_id/info', function(req, res) {
   res.render('info', {
     title: 'Target Information',
-    label: 'Target ID',
-    button_type: 'querybutton' // All the backend querying happens at /bin/www
-  });                     // Hey, I really could use POSTing a form instead of sockets here. That way I wouldn't have to spend more time figuring out how to extract a URL parameter for use in /bin/www as the database to be retrieving info from
+    game_id: req.params.game_id // I had more here but I deleted it. Dunno what it was left over from. If you see this comment later in time, go ahead and delete it
+  });
+});
+router.post('/:game_id/info', function(req, res) {
+  res.params.not_found_error = false;
+  res.params.target_name = false;
+  res.params.target_killword = false;
+  var db = c.database('game_' + req.params.game_id);
+  db.get(req.body.key, function (err, doc) {
+    if (err) {
+      res.locals.not_found_error = true;
+    } else {
+      res.locals.target_name = doc.name;
+      res.locals.target_killword = doc.killword;
+    }
+  });
+  res.render('info', {
+    title: 'Target Information',
+    target_name: res.locals.target_name,
+    target_killword: res.locals.target_killword,
+    not_found_error: res.locals.not_found_error,
+    game_id: req.params.game_id
+  });
 });
 /* GET report a kill page */
-router.get('/:in/report', function(req, res) {
+router.get('/:game_id/report', function(req, res) {
   res.render('index', {
-    title: 'Report a Kill'
+    title: 'Report a Kill',
+    game_id: req.params.game_id
   });
 });
 /* GET leak page. */
-router.get('/:in/leak', function(req, res) {
+router.get('/:game_id/leak', function(req, res) {
   res.render('index', {
-    title: 'LEAK INFORMATION'
+    title: 'LEAK INFORMATION',
+    game_id: req.params.game_id
   });
 });
-module.exports = router;
+module.exports.routes = router;

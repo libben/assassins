@@ -1,5 +1,5 @@
-form.form-inline
-  .form-group
-    label= label
-    input#key.form-control(type='password')
-  button(type='button',id='#{button_type}',class='btn btn-default Unpressed') Show info
+form.form-inline(action='/info',method='post')
+.form-group
+  label Target ID
+  input.form-control(type='password',name='key')
+input(type='submit',class='btn btn-default',value='Submit')

@@ -5,12 +5,12 @@
  */
 
 var app = require('../app');
+var router = require('../routes/index');
 var debug = require('debug')('Assassins:server');
 var http = require('http');
 var events = require('events');
 var cradle = require('cradle');
-var open = require('amqplib').connect('amqp://localhost');
-//var db = new(cradle.Connection)().database('assassins'); // This will be altered under the new structure.
+var c = new(cradle.Connection);
 var event_emitter = new events.EventEmitter();
 
 /*
@@ -27,27 +27,6 @@ app.set('port', port);
 var server = http.createServer(app);
 
 /*
- * RabbitMQ receiver setup.
- */
-
-open.then(function(conn) { // Remember, this receiver is opened before the sender is
-  var ok = conn.createChannel();
-  ok = ok.then(function(ch) {
-   var q = 'sockety';
-   ch.assertQueue(q, {durable: false}); // Queue will not persist after rebooting RabbitMQ server
-   ch.consume(q, function(msg) {
-     console.log(" [x] Received %s", msg.content.toString());
-     if (msg.content.toString() === 'start_timer') {
-       event_emitter.emit('start_timer');
-       console.log('I emitted start_timer as an event.');
-     }
-     ch.ack(msg); // Acknowledge receipt of message
-   });
-  });
-  return ok;
-});
-
-/*
  * Socketing protocol.
  */
 
@@ -60,32 +39,28 @@ io.on('connection', function(socket){
   socket.on('join', function(data) {
     console.log('user joined and says, \'' + data + '\'');
   });
-  /*socket.on('query', function(data) {
-    console.log('Received ' + data);
-    db.get(data, function (err, doc) {      This block of code no longer is applicable under the new strucure. Keeping it here until I write a suitable replacement.
-      console.log(doc.name);
-      console.log(doc.killword);
-      socket.emit('response', {
-        name: doc.name,
-        killword: doc.killword
-      });
-    });
-  });*/
+  router.event_emitter.on('game_countdown', function(game_id) {
+    var count = 20; //CHANGE
+    var counter = setInterval(function () {
+      socket.join(game_id);
+      io.to(game_id).emit('count_update', count);
+      console.log('emmitted count_update to frontend');
+      count = count - 1;
+      if (count < 1) {
+        //app.locals.game_on = 1;     // These also will be replaced
+        //console.log('Changed app.locals.game_on to ' + app.locals.game_on);
+        clearInterval(counter);
+        io.to(game_id).emit('game_on');
+        var db = c.database('game_' + game_id);
+        db.merge('game_on', {val: 1}, function(err,res) {
+          console.log('merging the property game_on to have a value of 1 for game \'' + game_id + '\' threw an error.'); // This will go eventually
+        });
+      }
+    }, 1000);
+  });
 });
-event_emitter.on('start_timer', function() {
-  var count = 20; //CHANGE
-  var counter = setInterval(function () {
-    io.sockets.emit('count_update', count);
-    console.log('emmitted count_update to frontend');
-    count = count - 1;
-    if (count < 1) {
-      //app.locals.game_on = 1;     // These also will be replaced
-      //console.log('Changed app.locals.game_on to ' + app.locals.game_on);
-      clearInterval(counter);
-      io.sockets.emit('game_on', null); // In fact, this whole sector will be altered to only emit to the right sockets
-    }
-  }, 1000);
-});
+
+
 /**
  * Listen on provided port, on all network interfaces.
  */

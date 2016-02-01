@@ -1,4 +1,14 @@
 extends layout
 block content                                                                                                                  
   h1= title
+  - if (not_found_error) {
+    p.problem Sorry! That key does not match any entry in our database. Please try again.
+  - }
+  - if (target_name) {
+    h3 Target name:
+    h3= target_name
+    h3 Target killword:
+    h3= target_killword
+  - } else {
   include partials/content/querydb.jade
+  - }

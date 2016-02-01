@@ -1,4 +1,4 @@
-form.form-inline(action='/unregister',method='post')
+form.form-inline(action='/#{game_id}/unregister',method='post')
   .form-group
     label Unregistration Key
     input.form-control(type='text',placeholder='1234567890',name='unregister_key')
