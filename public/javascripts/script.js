@@ -1,15 +1,15 @@
 $(document).ready(function(){
-  var socket = io.connect('http://localhost:3000'); // Wow, I really don't need this script on pages without the /:game_id/ parameter! How interesting.
+  var game_id = location.pathname.match(/^\/(\d+)\//)[1]; // Returns entry #2 in the array, which is the subgroup we want. note: .match() does not allow subgroups if the regular expression is ended with '/g'
+  var socket = io(); // Syntax stays like this until deployment
   socket.on('connect', function(data) {
-    socket.emit('join','Hello world from client'); // Will delete later
-    socket.join(game_id); // should join the channel to the game_id being passed to it
+    socket.emit('join', game_id); // For some reason at some point I didn't think I needed this. Re-evaluate later.
   });
   socket.on('count_update', function(data) {
-    socket.to(game_id).emit('got_it','Got your socket request.'); // delete this line later
+    socket.emit('got_it','Got your socket request with data: ' + data); // delete this line later
     document.getElementById('countdown_text').innerHTML = data + ' seconds until game begins.';
   });
   socket.on('game_on', function() {
     var countdown_timer = document.getElementById('countdown_text');
-    countdown_timer.parentNode.removeChild(timey); // Stack Overflow says javascipt permits infanticide, but not suicide, that's why it's like this
+    countdown_timer.parentNode.removeChild(countdown_timer); // Stack Overflow says javascipt permits infanticide, but not suicide, that's why it's like this
   });
 });

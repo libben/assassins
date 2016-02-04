@@ -29,37 +29,38 @@ var server = http.createServer(app);
 /*
  * Socketing protocol.
  */
-
 var io = require('socket.io')(server);
 io.on('connection', function(socket){
   console.log('a user connected');
   socket.on('got_it', function(data) {
     console.log('- ' + data);
   });
-  socket.on('join', function(data) {
-    console.log('user joined and says, \'' + data + '\'');
+  socket.on('disconnect', function(){
+    console.log('a user disconnected');
   });
-  router.event_emitter.on('game_countdown', function(game_id) {
-    var count = 20; //CHANGE
-    var counter = setInterval(function () {
-      socket.join(game_id);
-      io.to(game_id).emit('count_update', count);
-      console.log('emmitted count_update to frontend');
-      count = count - 1;
-      if (count < 1) {
-        //app.locals.game_on = 1;     // These also will be replaced
-        //console.log('Changed app.locals.game_on to ' + app.locals.game_on);
-        clearInterval(counter);
-        io.to(game_id).emit('game_on');
-        var db = c.database('game_' + game_id);
-        db.merge('game_on', {val: 1}, function(err,res) {
-          console.log('merging the property game_on to have a value of 1 for game \'' + game_id + '\' threw an error.'); // This will go eventually
-        });
-      }
-    }, 1000);
+  socket.on('join', function(data) {
+    console.log('user joined and says, "' + data + '"');
+    socket.join(data);
   });
 });
-
+router.event_emitter.on('game_countdown', function(game_id) {
+  var count = 20; //CHANGE
+  var counter = setInterval(function () {
+    io.to(game_id).emit('count_update', count);
+    console.log('emmitted count_update to frontend');
+    count = count - 1;
+    if (count < 0) { // I'm saying to do this whent the count is less than zero because when I set it to trigger at (count < 1) the timer disappeared when it showed the number 2.
+      clearInterval(counter);
+      io.to(game_id).emit('game_on');
+      var db = c.database('game_' + game_id);
+      db.merge('game_on', {val: 1, countdown: false}, function(err,res) {
+        if (err) {
+          console.error('Error at location 4627: ' + err.message);
+        }
+      });
+    }
+  }, 1000);
+});
 
 /**
  * Listen on provided port, on all network interfaces.

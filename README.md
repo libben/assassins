@@ -12,8 +12,7 @@ Start your CouchDB server, go to your project directory, then fire up your Node.
 `DEBUG=libben.github.io:* npm start`
 
 ### Known bugs:
-The third time you try to sign up to one game, the server crashes with an error attributing the variable "game_id" to "req.params.game_id", saying
-> TypeError: Cannot read property 'game_id' of undefined
+none
 
 To-do:
 - rewrite your querying to be a POSTed form rather than using sockets [COMPLETE]
@@ -22,7 +21,7 @@ To-do:
 - create email server, then set up email-based authentication for people signing up to the game.
 - insert options for each site instance in the create-a-site form... what language of kill-words do you want? How complex? What kill modes are available? How many people needed to start game? How much time between criteria for game start being met and the game actually starting?
 - BIG STEP: create live feed of kills with sockets :)
-- seek out: can RabbitMQ be eliminated? [ANSWER: PROBABLY, WILL HAVE TO RUN SERVER AGAIN TO FIND OUT]
+- seek out: can RabbitMQ be eliminated? [ANSWER: YES, NOW IT HAS BEEN DONE]
 - multiple routing files; app.js should check a database to see if (a) the number of instances is equal or greater than the url parameter being called and (b) whether or not the game is on for that database. Should probably add game_on property to running instances db.
 - set up grunt or gulp to streamline starting the servers you need into one command
 

@@ -17,7 +17,7 @@ router.get('/', function(req, res) {
 /* POST home page */
 router.post('/', function(req, res) {
   //res.app.locals.comp = true; < I thought I needed this, but I can get by evaluating completion based on if there were any errors submitting the request or not
-  res.locals.err = false; // replace these properties of the app with database calls?
+  res.locals.err = null; // replace these properties of the app with database calls?
   res.locals.new_game_id = null; // This is null at the start. I don't want it to show up as undefined down the road and give me a hassle. It will only be called upon if the new game database is successfully created.
   res.locals.title = 'Create';
   var db = c.database('instances');
@@ -25,11 +25,10 @@ router.post('/', function(req, res) {
     if (err) {
       res.locals.err = 'unknown';
       console.log('Set err to unknown');
-      module.exports.event_emitter.emit('proceed_to_completion'); // ignoring DRY here a bit, but it works for the time being.
-      console.log('I emitted proceed_to_completion.');
+      console.error('Error in section 2147: ' + err.message);
+      module.exports.event_emitter.emit('render');
     } else {
       resp.forEach(function (value) {
-        console.log(value);
         if (value === String(req.body.email)) {
           res.locals.err = 'email_in_use';
           console.log('Set err to email_in_use');
@@ -40,46 +39,44 @@ router.post('/', function(req, res) {
     }
   });
   module.exports.event_emitter.on('proceed_to_completion', function(){
-    if (res.locals.err === false) {
-      db.get('game_counter', function (err, doc) {
-        console.log('game_counter reads ' + doc.val); // Remember to save the incrementally increasing property as 'val' when you create the database 'instances' with the document 'game_counter' [COMPLETE]
-        var number_of_games = Number(doc.val) + 1;
-        db.merge('game_counter', {val: number_of_games}, function (err, resp) {
-          if (err) {
-            res.locals.error = 'unknown';
-          }
-        });
-        db.save(String(number_of_games), {
-          email: req.body.email
-        }, function(err, resp) {
+    db.get('game_counter', function (err, doc) {
+      console.log('game_counter reads ' + doc.val);
+      var number_of_games = Number(doc.val) + 1;
+      db.merge('game_counter', {val: number_of_games}, function (err, resp) {
+        if (err) {
+          console.error("Error in section 9909: " + err.message);
           res.locals.error = 'unknown';
-        });
-        var new_database = c.database('game_' + String(number_of_games)); // CouchDB does not permit databases beginning with numbers. Thus, I must call upon these by starting them with 'game_'.
-        new_database.create();
-        console.log('new_database created.');
-        new_database.save('_design/all', {
-          views: {
-            user_list: { // Will probably have more default views being generated here as I develop further.
-              map: 'function (doc) { if (doc.name) { emit(doc, null) } }' // I like keeping this all as one line. Makes things concise.
-            }
-          }
-        });
-        new_database.save('game_on', { // Creates document 'game_on' with property 'val' set to 0
-          val: 0
-        }, function(err, res) {
-          if (err) {
-            // Handle error
-          }
-        });
-        if (res.locals.err === false) {
-          res.locals.title = 'Success';
-          res.locals.new_game_id = number_of_games;
         }
-        module.exports.event_emitter.emit('render'); // Ignoring DRY again here
       });
-    } else {
-      module.exports.event_emitter.emit('render');
-    }
+      db.save(String(number_of_games), {
+        email: req.body.email
+      }, function(err, resp) {
+        res.locals.error = 'unknown';
+      });
+      var new_database = c.database('game_' + String(number_of_games)); // CouchDB does not permit databases beginning with numbers. Thus, I must call upon these by starting them with 'game_'.
+      new_database.create();
+      console.log('new_database created.');
+      new_database.save('_design/all', {
+        views: {
+          user_list: { // Will probably have more default views being generated here as I develop further.
+            map: 'function (doc) { if (doc.name) { emit(doc, null) } }' // I like keeping this all as one line. Makes things concise.
+          }
+        }
+      });
+      new_database.save('game_on', { // Creates document 'game_on' with property 'val' set to 0
+        val: 0,
+        countdown: false
+      }, function(err, resp) {
+        if (err) {
+          console.error('Error in section 1123: ' + err.message);
+        }
+      });
+      if (res.locals.err === null) {
+        res.locals.title = 'Success';
+        res.locals.new_game_id = number_of_games;
+      }
+      module.exports.event_emitter.emit('render'); // Ignoring DRY again here
+    });
   });
   module.exports.event_emitter.on('render', function() {
     res.render('creator', {
@@ -138,14 +135,14 @@ router.get('/:game_id/signup', function(req, res) {
   });
 });
 router.post('/:game_id/signup', function(req, res) {
+  res.locals.submit_error = null;
   var db = c.database('game_' + req.params.game_id);
   res.locals.user_id = (Math.floor((Math.random() * 10000000000))).toString();
   res.locals.unreg_key = (Math.floor((Math.random() * 10000000000))).toString();
   var obj = {};
-  var page_title = 'Sign-Up';
   db.view('all/user_list', function (err, resp) {
     if (err) {
-      // Handle Error
+      console.error('Error in section 5833: ' + err.message); // All these numbers before error messages are arbitrary, but let me find the errors quickly with CTRL-F.
     } else {
       resp.forEach(function (key) { // Had (key,row) but I don't think I need 'row'
         obj[key._id] = 1; // Arbitrarily picked 1 as the value here; it's not relevent. I just need the id to show up as part of this faux-hash. > {"3488842": 1}
@@ -158,47 +155,54 @@ router.post('/:game_id/signup', function(req, res) {
           console.log('Error thrown - email in use');
         }
       });
-      module.exports.event_emitter.emit('success_conditional');
-    }
-  });
-  module.exports.event_emitter.on('success_conditional', function() {
-    if (res.locals.submit_error === undefined) {
-      while (obj[res.locals.user_id]) { // This set of two similar loops may ignore DRY conventions
-          res.locals.user_id = (Math.floor((Math.random() * 10000000000))).toString();
-          console.log('Re-running id generator.');
-      }
-      while (obj[res.locals.unreg_key]) {
-          res.locals.unreg_key = (Math.floor((Math.random() * 10000000000))).toString();
-          console.log('Re-running unregistration key generator.');
-      }
-      db.save(res.locals.user_id, {
-        name: req.body.name.trim(), email: req.body.email.toLowerCase().trim(), unregister_key: res.locals.unreg_key
-      }, function (err, res) {
-        if (err) {
-          console.log(err);
-          res.locals.unknown_problem = true; // potentially inefficient code here.
+      if (res.locals.submit_error === null) { // Changed this from '... === undefined'. Not sure why it was like that. Also explicitly declaring it's null above now.
+        while (obj[res.locals.user_id]) { // This set of two similar loops may ignore DRY conventions
+            res.locals.user_id = (Math.floor((Math.random() * 10000000000))).toString();
+            console.log('Re-running id generator.');
         }
-        module.exports.event_emitter.emit('game_ready_check');
-      });
-      module.exports.event_emitter.on('game_ready_check', function() {
-        db.view('all/user_list', function(err, resp) { // If there are 10 people signed up, start the countdown to the beginning of the game.
-          if (resp.length > 9) { // 9 is not a value set in stone. I am seriously thinking it would be a good idea to make this a property in the database, choosable when you create your instance.
-            module.exports.event_emitter.emit('game_countdown', req.params.game_id);
-            console.log('I emitted \'game_countdown\'');
+        while (obj[res.locals.unreg_key]) {
+            res.locals.unreg_key = (Math.floor((Math.random() * 10000000000))).toString();
+            console.log('Re-running unregistration key generator.');
+        }
+        db.save(res.locals.user_id, {
+          name: req.body.name.trim(), email: req.body.email.toLowerCase().trim(), unregister_key: res.locals.unreg_key
+        }, function (err, resp) {
+          if (err) {
+            console.error('Error in section 1212: ' + err.message);
+            res.locals.unknown_problem = true; // potentially inefficient code here.
+          } else {
+            db.view('all/user_list', function(err, resp) { // If there are 10 people signed up, start the countdown to the beginning of the game.
+              if (resp.length > 9) { // 9 is not a value set in stone. I am seriously thinking it would be a good idea to make this a property in the database, choosable when you create your instance.
+                db.get('game_on', function(err, doc) {
+                  if (err) {
+                    console.error('Error in section 3468: ' + err.message);
+                  } else {
+                    if (doc.countdown === false) {
+                      module.exports.event_emitter.emit('game_countdown', req.params.game_id);
+                      db.merge('game_on', {countdown: true}, function (err,doc) {
+                        if (err) {
+                          console.error('Error in section 1241: ' + err.message);
+                        }
+                      });
+                    }
+                  }
+                });
+              }
+            });
           }
         });
-      });
-      if (res.locals.unknown_problem) {
-        res.locals.submit_error = 'unknown';
-        page_title = 'Sign-Up';
-      } else if (res.locals.submit_error === undefined){
-        page_title = 'Sign-Up Has Completed!';
+        if (res.locals.unknown_problem) {
+          res.locals.submit_error = 'unknown';
+          res.locals.page_title = 'Sign-Up';
+        } else if (res.locals.submit_error === null){
+          res.locals.page_title = 'Sign-Up Has Completed!';
+        }
+      } else {
+        res.locals.page_title = 'Sign-Up';
       }
-    } else {
-      page_title = 'Sign-Up';
     }
     res.render('signup', {
-      title: page_title,
+      title: res.locals.page_title,
       error: res.locals.submit_error,
       game_id: req.params.game_id
     });
@@ -218,6 +222,7 @@ router.post('/:game_id/info', function(req, res) {
   var db = c.database('game_' + req.params.game_id);
   db.get(req.body.key, function (err, doc) {
     if (err) {
+      console.error('Error in section 1919: ' + err.message);
       res.locals.not_found_error = true;
     } else {
       res.locals.target_name = doc.name;
