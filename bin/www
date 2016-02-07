@@ -53,9 +53,17 @@ router.event_emitter.on('game_countdown', function(game_id) {
       clearInterval(counter);
       io.to(game_id).emit('game_on');
       var db = c.database('game_' + game_id);
-      db.merge('game_on', {val: 1, countdown: false}, function(err,res) {
+      var instances_db = c.database('instances');
+      db.merge('game_on', {val: 1, countdown: 0, game_start_time: new Date().getTime()}, function(err,res) {
         if (err) {
           console.error('Error at location 4627: ' + err.message);
+        }
+      });
+      instances_db.merge(game_id, {is_game_on: 1}, function(err,res) {
+        if (err) {
+          console.error('Error at location 2736: ' + err.message);
+        } else {
+          router.game_statuses[game_id] = 1; // This setting doesn't have to be done within this loop, but that's what I'm doing
         }
       });
     }

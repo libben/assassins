@@ -2,17 +2,9 @@ table
   tr
     td
       a(href='/#{game_id}/',class='btn btn-default') Home
-    // insert conditional: show different links if game is on or off.
-    //- if (game_on === true) {
     td
       a(href='/#{game_id}/info',class='btn btn-default') Get Target Information
     td
       a(href='/#{game_id}/report',class='btn btn-default') Report a Kill
     td
       a(href='/#{game_id}/leak',class='btn btn-danger') LEAK INFORMATION
-    //- } else {
-    td
-      a(href='/#{game_id}/signup',class='btn btn-default') Sign Up For Next Game
-    td
-      a(href='/#{game_id}/unregister',class='btn btn-default') Unregister From Next Game
-    //- }

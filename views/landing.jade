@@ -1,3 +1,9 @@
 extends layout
+block header
+  if game_status === 'on'
+    include partials/templates/on_header.jade
+  else if game_status === 'off'
+    p#countdown_text
+    include partials/templates/off_header.jade
 block content
-p Howdy! This page will probably have a public kill log updating with sockets soon.
+  p Howdy! This page will probably have a public kill log updating with sockets soon.

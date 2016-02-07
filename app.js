@@ -28,6 +28,9 @@ instances_database.exists(function (err,exists) {
       views: {
         ids_and_emails: {
           map: 'function(doc) { if (doc.email) { emit(doc._id, doc.email) } }'
+        },
+        ids_and_is_game_on: {
+          map: 'function(doc) {if (doc.is_game_on !== undefined) { emit(doc._id, doc.is_game_on) } }' // This is like this because just checking if the parameter exists doesn't work with documents with game_on set to 'false'
         }
       }
     });
