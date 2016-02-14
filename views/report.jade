@@ -1,0 +1,16 @@
+extends on
+block content                                                                                                                  
+  h1= title
+  if title === 'Kill Reported'
+    h3 Kill recorded. Your new target is:
+    h3= new_target_name
+    h3 Their killword is:
+    h3= new_target_killword
+  else if title === 'You Win!'
+    h2 Congratulations! You are the winner of Assassins!
+  else
+    if error === 'key_not_found'
+      include partials/content/notfoundproblem.jade
+    else if error === 'unknown'
+      include partials/content/unknownproblem.jade
+    include partials/content/killreportform.jade

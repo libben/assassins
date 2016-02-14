@@ -4,125 +4,208 @@
  * Module dependencies.
  */
 
-var app = require('../app');
-var router = require('../routes/index');
-var debug = require('debug')('Assassins:server');
-var http = require('http');
-var events = require('events');
-var cradle = require('cradle');
-var c = new(cradle.Connection);
-var event_emitter = new events.EventEmitter();
-
+var app = require('../app')
+var router = require('../routes/index')
+var debug = require('debug')('Assassins:server')
+var http = require('http')
+var cradle = require('cradle')
+var c = new (cradle.Connection)
+var instances_db = c.database('instances')
 /*
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3000');
-app.set('port', port);
+var port = normalizePort(process.env.PORT || '8080')
+app.set('port', port)
 
 /*
  * Create HTTP server.
  */
 
-var server = http.createServer(app);
+var server = http.createServer(app)
 
 /*
  * Socketing protocol.
  */
-var io = require('socket.io')(server);
-io.on('connection', function(socket){
-  console.log('a user connected');
-  socket.on('got_it', function(data) {
-    console.log('- ' + data);
-  });
-  socket.on('disconnect', function(){
-    console.log('a user disconnected');
-  });
-  socket.on('join', function(data) {
-    console.log('user joined and says, "' + data + '"');
-    socket.join(data);
-  });
-});
-router.event_emitter.on('game_countdown', function(game_id) {
-  var count = 20; //CHANGE
+var io = require('socket.io')(server)
+io.on('connection', function (socket) {
+  console.log('a user connected')
+  socket.on('got_it', function (data) {
+    console.log('- ' + data)
+  })
+  socket.on('disconnect', function () {
+    console.log('a user disconnected')
+  })
+  socket.on('join', function (data) {
+    console.log('user joined and says, "' + data + '"')
+    socket.join(data)
+  })
+})
+router.event_emitter.on('game_countdown', function (game_id) {
+  var count = 5 // CHANGE
   var counter = setInterval(function () {
-    io.to(game_id).emit('count_update', count);
-    console.log('emmitted count_update to frontend');
-    count = count - 1;
+    io.to(game_id).emit('count_update', count)
+    console.log('emmitted count_update to frontend')
+    count = count - 1
     if (count < 0) { // I'm saying to do this whent the count is less than zero because when I set it to trigger at (count < 1) the timer disappeared when it showed the number 2.
-      clearInterval(counter);
-      io.to(game_id).emit('game_on');
-      var db = c.database('game_' + game_id);
-      var instances_db = c.database('instances');
-      db.merge('game_on', {val: 1, countdown: 0, game_start_time: new Date().getTime()}, function(err,res) {
+      clearInterval(counter)
+      io.to(game_id).emit('game_on')
+      var db = c.database('game_' + game_id)
+      db.merge('game_on', {val: 1, countdown: 0, game_start_time: Date.now()}, function (err, res) {
         if (err) {
-          console.error('Error at location 4627: ' + err.message);
+          console.error('Error at location 4627: ' + err.message)
         }
-      });
-      instances_db.merge(game_id, {is_game_on: 1}, function(err,res) {
+      })
+      instances_db.merge(game_id, {is_game_on: 1}, function (err, res) {
         if (err) {
-          console.error('Error at location 2736: ' + err.message);
+          console.error('Error at location 2736: ' + err.message)
         } else {
-          router.game_statuses[game_id] = 1; // This setting doesn't have to be done within this loop, but that's what I'm doing
+          router.game_statuses[game_id].is_on = 1 // This setting doesn't have to be done within this loop, but that's what I'm doing
         }
-      });
+      })
+      db.view('all/user_list', function (err, res) {
+        var killword_list = ['Barrack Obama', 'Justin Beiber', 'Donald Trump', 'Hillary Clinton', 'Facebook', 'Batman', 'Wonder Woman', 'New Hampshire', 'Africa', 'Lucky Charms', 'Milky Way', 'South Dakota', 'Darth Vader', 'Kylo Ren', 'Han Solo', 'honey badger', 'Jurassic Park', 'Captain America', 'Instagram', 'Snapchat', 'Twitter', 'Michigan'] // Will stick this into a json file soon, so I can call upon multiple arrays of words
+        if (err) {
+          console.error('Error in section 1468: ' + err.message)
+        } else {
+          var set_killwords = new Promise(function (resolve, reject) {
+            var successful_killword_attributions = 0
+            var id_array = []
+            res.forEach(function (key, val) {
+              var random_number = Math.floor(Math.random() * killword_list.length) // Arrays start at position zero, so I don't need to add a plus 1 at the end here
+              db.merge(key._id, {killword: killword_list[random_number]}, function (err, response) {
+                if (err) {
+                  console.error('Error in section 6541: ' + err.message)
+                } else {
+                  id_array.push(key._id) // simplifies adding my ids to the array
+                  killword_list.splice(random_number, 1) // Removes one element starting at the place dictated by the random number. This ensures no two people get the same killword.
+                  successful_killword_attributions++
+                  if (successful_killword_attributions === res.length) {
+                    resolve(id_array)
+                  }
+                }
+              })
+            })
+          })
+          set_killwords.then(function (output) {
+            for (i = 0; i < output.length - 2; i++) { // Wikipedia says length - 2 is the way you're supposed to do this. No clue why, but it works fine. Credits to Knuth, Fisher, and Yates for the basis for this shuffle
+              var j = Math.floor(Math.random()*(output.length - i)) // this loop scrambles the array
+              var original_i = output[i]
+              output[i] = output[i+j]
+              output[i+j] = original_i
+              if (i === output.length - 3) {
+                return output
+              }
+            }
+          }).then(function(output) {
+            merge_last_player = new Promise(function (resolve, reject) {
+              db.merge(output[output.length - 1], { target_id: output[0] }, function (err) {
+                if (err) {
+                  console.error('Error in section 8772: ' + err.message)
+                }
+                resolve('proceed')
+              })
+            })
+            merge_last_player.then(function (result) {
+              for (i = 0; i < output.length - 1; i++) {
+                db.merge(output[i], { target_id: output[i+1] }, function (err) {
+                  if (err) {
+                    console.error('Error in section 9852: ' + err.message)
+                  }
+                })
+              }
+            })
+          })
+        }
+      })
     }
-  }, 1000);
-});
+  }, 1000)
+})
 
+/* Triggers when a game ends */
+router.event_emitter.on('game_over', function (game_id) {
+  router.game_statuses[game_id].is_on = null
+  var db = c.database('game_' + game_id)
+  db.merge('game_on', {game_end_time: Date.now()}, function (err) {
+    if (err) {
+      console.error('Error in section 6211: ' + err.message)
+    }
+  })
+  db.view('all/alive_user_ids_and_target_ids', function (err, res) {
+    if (err) {
+      console.error('Error in section 4621: ' + err.message)
+    } else {
+      res.forEach(function (key, val) { // this loop should only set the value once
+        db.get(key, function (err, doc) {
+          if (err) {
+            console.error('Error in section 5311: ' + err.message)
+          } else {
+            io.to(game_id).emit('game_over', doc.name)
+            router.game_statuses[game_id.winner_name = doc.name
+            instances_db.merge(game_id, {email: null, is_game_on: null, winner_name: doc.name}, function (err) {
+              if (err) {
+                console.error('Error in section 2473: ' + err.message)
+              }
+            })
+          }
+        })
+      })
+    }
+  })
+})
 /**
  * Listen on provided port, on all network interfaces.
  */
 
-server.listen(port);
-server.on('error', onError);
-server.on('listening', onListening);
+server.listen(port)
+server.on('error', onError)
+server.on('listening', onListening)
 
 /**
  * Normalize a port into a number, string, or false.
  */
 
-function normalizePort(val) {
-  var port = parseInt(val, 10);
+function normalizePort (val) {
+  var port = parseInt(val, 10)
 
   if (isNaN(port)) {
     // named pipe
-    return val;
+    return val
   }
 
   if (port >= 0) {
     // port number
-    return port;
+    return port
   }
 
-  return false;
+  return false
 }
 
 /**
  * Event listener for HTTP server "error" event.
  */
 
-function onError(error) {
+function onError (error) {
   if (error.syscall !== 'listen') {
-    throw error;
+    throw error
   }
 
   var bind = typeof port === 'string'
     ? 'Pipe ' + port
-    : 'Port ' + port;
+    : 'Port ' + port
 
   // handle specific listen errors with friendly messages
   switch (error.code) {
     case 'EACCES':
-      console.error(bind + ' requires elevated privileges');
-      process.exit(1);
-      break;
+      console.error(bind + ' requires elevated privileges')
+      process.exit(1)
+      break
     case 'EADDRINUSE':
-      console.error(bind + ' is already in use');
-      process.exit(1);
-      break;
+      console.error(bind + ' is already in use')
+      process.exit(1)
+      break
     default:
-      throw error;
+      throw error
   }
 }
 
@@ -130,10 +213,10 @@ function onError(error) {
  * Event listener for HTTP server "listening" event.
  */
 
-function onListening() {
-  var addr = server.address();
+function onListening () {
+  var addr = server.address()
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
-    : 'port ' + addr.port;
-  debug('Listening on ' + bind);
+    : 'port ' + addr.port
+  debug('Listening on ' + bind)
 }
