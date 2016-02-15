@@ -6,8 +6,6 @@ module.exports.event_emitter = new events.EventEmitter()
 var c = new (cradle.Connection)
 var instances_db = c.database('instances')
 var Promise = require('es6-promises')
-var postmark = require('postmark')
-var client = new postmark.Client('18d68691-5040-4bfd-b6c7-b6e62f17d16b')
 module.exports.game_statuses = {'game_count': 0} // In case the instances database doesn't exist when the server starts up, this ensures requests made to /:game_id/ of any kind still 404 when no game databases exist
 
 var kill_unless_game_on = function (id, response, nxt) { // This will be applied to each route that should only be able to be accessed if the game is on. If it isn't, the route 404s. I'll make the error prettier later
@@ -53,12 +51,6 @@ instances_db.get('game_counter', function (err, doc) {
 })
 /* GET home page. */
 router.get('/', function (req, res) {
-  client.sendEmail({
-    'From': 'no-reply@assassins.ga',
-    'To': 'benr@openmailbox.org',
-    'Subject': 'Test',
-    'TextBody': 'Hello, this is a test sent on ' + Date.now()
-  })
   res.render('creator', {
     title: 'Create',
     new_game_id: null,
