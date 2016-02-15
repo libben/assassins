@@ -1,5 +1,8 @@
-form.form-inline(action='/#{game_id}/info',method='post')
+form.form-horizontal(action='/#{game_id}/info',method='post')
   .form-group
-    label Target ID
-    input.form-control(type='password',name='key')
-  input(type='submit',class='btn btn-default',value='Submit')
+    label.col-sm-2.control-label(for='key') Target ID
+    .col-sm-2
+      input#key.form-control(type='password',name='key')
+  .form-group
+    .col-sm-offset-2.col-sm-2
+      input(type='submit',class='btn btn-default',value='Submit')

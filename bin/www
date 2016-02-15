@@ -11,6 +11,8 @@ var http = require('http')
 var cradle = require('cradle')
 var c = new (cradle.Connection)
 var Promise = require('es6-promises')
+var postmark = require('postmark')
+var client = new postmark.Client()
 var instances_db = c.database('instances')
 /*
  * Get port from environment and store in Express.
@@ -79,6 +81,12 @@ router.event_emitter.on('game_countdown', function (game_id) {
                   console.error('Error in section 6541: ' + err.message)
                 } else {
                   id_array.push(key._id) // simplifies adding my ids to the array
+                  client.sendEmail({
+                    'From': 'mailbot@assassins.ga',
+                    'To': key.email,
+                    'Subject': 'The Game Has Begun',
+                    'TextBody': 'It is time to play. Your access code at http://assassins.ga/' + game_id + ' is ' + key._id
+                  })
                   killword_list.splice(random_number, 1) // Removes one element starting at the place dictated by the random number. This ensures no two people get the same killword.
                   successful_killword_attributions++
                   if (successful_killword_attributions === res.length) {
@@ -98,7 +106,7 @@ router.event_emitter.on('game_countdown', function (game_id) {
                 return output
               }
             }
-          }).then(function(output) {
+          }).then(function (output) {
             merge_last_player = new Promise(function (resolve, reject) {
               db.merge(output[output.length - 1], { target_id: output[0] }, function (err) {
                 if (err) {
@@ -142,7 +150,7 @@ router.event_emitter.on('game_over', function (game_id) {
             console.error('Error in section 5311: ' + err.message)
           } else {
             io.to(game_id).emit('game_over', doc.name)
-            router.game_statuses[game_id.winner_name = doc.name]
+            router.game_statuses[game_id].winner_name = doc.name
             instances_db.merge(game_id, {email: null, is_game_on: null, winner_name: doc.name}, function (err) {
               if (err) {
                 console.error('Error in section 2473: ' + err.message)

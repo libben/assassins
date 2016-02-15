@@ -8,6 +8,8 @@ block content
       p#problem Sorry! The email address you entered is already in use.
     else if (error === 'unknown')
       include partials/content/unknownproblem.jade
+    else if (error === 'not_an_email')
+      include partials/content/notanemailproblem.jade
     h3 Sign up for the next game of Assassins here!
     include partials/content/signupform.jade
   else if (title === 'You Have Signed Up!')

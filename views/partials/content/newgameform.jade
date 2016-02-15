@@ -1,5 +1,8 @@
-form.form-inline(action='/',method='post')
+form.form-horizontal(action='/',method='post')
   .form-group
-    label Email
-    input.form-control(type='text',placeholder='yourname@example.com',name='email')
-  input(type='submit',class='btn btn-default',value='Submit')
+    label.col-sm-2.control-label(for='email') Email
+    .col-sm-2
+      input#email.form-control(type='text',placeholder='yourname@example.com',name='email')
+  .form-group
+    .col-sm-offset-2.col-sm-2
+      input(type='submit',class='btn btn-default',value='Submit')

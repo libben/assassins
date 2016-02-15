@@ -1,5 +1,5 @@
 $(document).ready(function(){
-  var game_id = location.pathname.match(/^\/(\d+)\//)[1]; // Returns entry #2 in the array, which is the subgroup we want. note: .match() does not allow subgroups if the regular expression is ended with '/g'
+  var game_id = location.pathname.match(/^\/(\d+)/)[1]; // Returns entry #2 in the array, which is the subgroup we want. note: .match() does not allow subgroups if the regular expression is ended with '/g'
   var socket = io(); // Syntax stays like this until deployment
   socket.on('connect', function (data) {
     socket.emit('join', game_id); // For some reason at some point I didn't think I needed this. Re-evaluate later.
@@ -14,5 +14,6 @@ $(document).ready(function(){
   socket.on('game_on', function () {
     var countdown_text_alias = document.getElementById('countdown_text');
     countdown_text_alias.parentNode.removeChild(countdown_text_alias); // Stack Overflow says javascipt permits infanticide, but not suicide, that's why it's like this
+    location.reload()
   });
 });

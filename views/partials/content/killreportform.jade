@@ -1,23 +1,21 @@
-form.form-inline(action='/#{game_id}/report',method='post')
+form.form-horizontal(action='/#{game_id}/report',method='post')
   .form-group
-    label Your ID
-    input.form-control(type='password',name='killer_key')
-    label Target's ID
-    input.form-control(type='password',name='target_key')
-    label Method of Death
-    label
-      input.form-control(type='radio',name='kill_method',checked,value='spoon')
-      | Spoon
-    label
-      input.form-control(type='radio',name='kill_method',value='sock')
-      | Sock Attack
-    label
-      input.form-control(type='radio',name='kill_method',value='killword')
-      | Killword
-    label
-      input.form-control(type='radio',name='kill_method',value='bomb')
-      | Bomb
-    label
-      input.form-control(type='radio',name='kill_method',value='poison')
-      | Poison
-  input(type='submit',class='btn btn-default',value='Submit')
+    label.col-sm-2.control-label(for='killer_key') Your ID
+    .col-sm-2
+      input#killer_key.form-control(type='password',name='killer_key')
+  .form-group
+    label.col-sm-2.control-label(for='target_key') Target's ID
+    .col-sm-2
+      input#target_key.form-control(type='password',name='target_key')
+  .form-group
+    label.col-sm-2.control-label(for='method_of_death') Method of Death
+    .col-sm-2
+      select.form-control(name='kill_method')
+        option(value='spoon') Spoon
+        option(value='sock') Sock Attack
+        option(value='killword') Killword
+        option(value='bomb') Bomb
+        option(value='poison') Poison
+  .form-group
+    .col-sm-offset-2.col-sm-2
+      input(type='submit',class='btn btn-default',value='Submit')
