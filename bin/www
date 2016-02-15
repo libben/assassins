@@ -10,6 +10,7 @@ var debug = require('debug')('Assassins:server')
 var http = require('http')
 var cradle = require('cradle')
 var c = new (cradle.Connection)
+var Promise = require('es6-promises')
 var instances_db = c.database('instances')
 /*
  * Get port from environment and store in Express.
@@ -141,7 +142,7 @@ router.event_emitter.on('game_over', function (game_id) {
             console.error('Error in section 5311: ' + err.message)
           } else {
             io.to(game_id).emit('game_over', doc.name)
-            router.game_statuses[game_id.winner_name = doc.name
+            router.game_statuses[game_id.winner_name = doc.name]
             instances_db.merge(game_id, {email: null, is_game_on: null, winner_name: doc.name}, function (err) {
               if (err) {
                 console.error('Error in section 2473: ' + err.message)
