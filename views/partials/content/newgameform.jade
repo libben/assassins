@@ -2,7 +2,15 @@ form.form-horizontal(action='/',method='post')
   .form-group
     label.col-sm-2.control-label(for='email') Email
     .col-sm-2
-      input#email.form-control(type='text',placeholder='yourname@example.com',name='email')
+      input#email.form-control(type='email',placeholder='yourname@example.com',name='email')
+  .form-group
+    label.col-sm-2.control-label(for='minimum_player_count') How many players should join before we start the game?
+    .col-sm-2
+      input#minimum_player_count.form-control(type='number',name='minimum_player_count')
+  .form-group
+    label.col-sm-2.control-label(for='countdown_length') How many seconds should the countdown to the game's start be?
+    .col-sm-2
+      input#minimum_player_count.form-control(type='number',name='countdown_length')
   .form-group
     .col-sm-offset-2.col-sm-2
       input(type='submit',class='btn btn-default',value='Submit')

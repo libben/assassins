@@ -17,6 +17,11 @@ rarely the db at creation phase results in a 412
 ### Notes:
 Jade doesn't like being asked to conditionally extend templates. Check out streaming build systems; see if this project would benefit from them.
 
+Do I want to enable two-person games? I don't think so, we shouldn't need that.
+
+The live kill feed may one day be merged into a portion of the landing page.
+
+I made kills part of a document of its own to avoid document update conflicts when the game is ending.
 
 ### To-do:
 - make routes that shouldn't be accessed redirect to the landing page instead of 404'ing [COMPLETE]
@@ -25,8 +30,19 @@ Jade doesn't like being asked to conditionally extend templates. Check out strea
 - make each input in the forms on the various views display on a new line [COMPLETE]
 - [ALPHA RELEASE]
 - add a favicon.ico
-- insert options for each site instance in the create-a-site form... what language of kill-words do you want? How complex? What kill modes are available? How many people needed to start game? How much time between criteria for game start being met and the game actually starting?
-- BIG STEP: create live feed of kills with sockets :) > check best practices on this. it should also log a game-start event at the beginning of the game.
+- insert options for each site instance in the create-a-site form...
+
+what language of kill-words do you want?
+
+How complex?
+
+What kill modes are available?
+
+How many people needed to start game? [COMPLETE]
+
+How much time between criteria for game start being met and the game actually starting? [COMPLETE] 
+
+- BIG STEP: create live feed of kills with sockets :) > it may also log a game-start event at the beginning of the game. [COMPLETE, NO GAME START EVENT CURRENTLY]
 - set up email-based authentication for people signing up to the game.
 - create a front-end to speak of
 - [NEXT RELEASE (DEVELOPMENT FURTHER THAN THIS POINT IS UNKNOWN)]

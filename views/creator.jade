@@ -10,6 +10,8 @@ block content
       p#problem Sorry! The email address you entered is already linked to a game in progress. Please use another, or wait until your current game is over. Thanks!
     else if (error === 'not_an_email')
       include partials/content/notanemailproblem.jade
+    else if (error === ('invalid_player_count' || 'invalid_countdown_length'))
+      p#problem Sorry! The number you entered is invalid.
     else
       include partials/content/unknownproblem.jade
   if (new_game_id !== null)

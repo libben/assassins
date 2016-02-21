@@ -1,6 +1,6 @@
 $(document).ready(function(){
   var game_id = location.pathname.match(/^\/(\d+)/)[1]; // Returns entry #2 in the array, which is the subgroup we want. note: .match() does not allow subgroups if the regular expression is ended with '/g'
-  var socket = io(); // Syntax stays like this until deployment
+  var socket = io();
   socket.on('connect', function (data) {
     socket.emit('join', game_id); // For some reason at some point I didn't think I needed this. Re-evaluate later.
   });

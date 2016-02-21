@@ -1,0 +1,27 @@
+doctype html
+html
+  head
+    include partials/templates/head.jade
+    script(src='https://code.jquery.com/jquery-2.1.4.min.js')
+    script(src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.7/socket.io.min.js')
+    script(src='/javascripts/logscript.js')
+  body
+    if game_status === 'on'
+      include partials/templates/on_header.jade
+    else if game_status === 'over'
+      include partials/templates/over_header.jade
+    if (kills.length > 0)
+      ul#kills.list-unstyled
+        each item in kills
+            li
+              .row
+                if item.kill_method === 'suicide'
+                  p.col-md-7= item.killer + ' leaked information and was dealt with accordingly.'
+                else
+                  p.col-md-2= item.killer
+                  p.col-md-1 killed
+                  p.col-md-2= item.victim
+                  p.col-md-1 via
+                  p.col-md-1= item.kill_method + '.'
+    else
+      p#nokills No kills have yet occurred. When they do, though, they'll show up here!

@@ -7,11 +7,8 @@ var c = new (cradle.Connection)
 var instances_db = c.database('instances')
 var Promise = require('es6-promises')
 var postmark = require('postmark')
-var client = new postmark.Client()
+var client = new postmark.Client('REPLACE')
 module.exports.game_statuses = {'game_count': 0} // In case the instances database doesn't exist when the server starts up, this ensures requests made to /:game_id/ of any kind still 404 when no game databases exist
-
-var kill_unless_game_exists = function (id, response) {
-}
 
 instances_db.view('all/ids_and_metadata', function (err, res) { // Sets the above object to have list of live instances of the game, coupled with their game_on status.
   if (err) {
@@ -49,6 +46,10 @@ router.post('/', function (req, res) {
         reject(err.message)
       } else if (!(/^[a-z0-9\._-]{1,63}@[a-z0-9_-]{1,63}\.[a-z\.]{1,63}$/.test(req.body.email.toLowerCase().trim()))) {
         reject('not_an_email')
+      } else if (!(/^\d{1,4}$/.test(req.body.minimum_player_count))) { // if the number of players isn't a number or is too long, reject it
+        reject('invalid_player_count')
+      } else if (!(/^\d{1,5}$/.test(req.body.countdown_length))) { // if the number of players isn't a number or is too long, reject it
+        reject('invalid_countdown_length')
       } else if (resp.length === 0) {
         resolve('proceed')
       } else {
@@ -59,7 +60,7 @@ router.post('/', function (req, res) {
           } else {
             success_counter++
             if (success_counter === resp.length) {
-              resolve('proceed') // Checks though all instances. If no conflict, the promise is accepted. // YES EMITS FROM HERE
+              resolve('proceed') // Checks though all instances. If no conflict, the promise is accepted.
             }
           }
         })
@@ -110,14 +111,23 @@ router.post('/', function (req, res) {
               }
             }
           })
-          c.database('game_' + String(number_of_games)).save('game_on', { // Creates document 'game_on' with property 'val' set to 0
+          c.database('game_' + String(number_of_games)).save('game_on', { // Creates document 'game_on' with metadata properties
             val: 0,
             countdown: 0,
+            minimum_player_count: req.body.minimum_player_count,
             game_start_time: null,
-            game_end_time: null
+            game_end_time: null,
+            countdown_length: req.body.countdown_length
           }, function (err, resp) {
             if (err) {
               console.error('Error in section 1123: ' + err.message)
+            }
+          })
+          c.database('game_' + String(number_of_games)).save('kills', { // This is a separate document from game_on because I was getting document update errors when the game was ending and the app was trying to register a kill
+            val: [] // empty array to be populated via murder
+          }, function (err, resp) {
+            if (err) {
+              console.error('Error in section 4123: ' + err.message)
             }
           })
         })
@@ -148,12 +158,11 @@ router.get('/:game_id', function (req, res, next) {
   if (!(/^\d+$/.test(req.params.game_id)) || (module.exports.game_statuses['game_count'] < req.params.game_id)) { // Checks that the string is composed solely of digits, and that that sequence of digits is less than the current game_count
     var err = new Error('Not Found')
     err.status = 404
-    err(next)
-  } else {
+    next(err)
+  } else { // note: kill_unless_game_exists has been eliminated
     console.log(module.exports.game_statuses)
     res.locals.winner_name = null
-    kill_unless_game_exists(req.params.game_id, res, next)
-    var promise = new Promise(function (resolve, reject) { // Hopefully this will work. I'm not totally certain on the structure of promises in this case.
+    var promise = new Promise(function (resolve, reject) {
       if (module.exports.game_statuses[req.params.game_id].is_on === 1) {
         resolve('on')
       } else if (module.exports.game_statuses[req.params.game_id].is_on === 0) {
@@ -169,6 +178,51 @@ router.get('/:game_id', function (req, res, next) {
         winner_name: module.exports.game_statuses[req.params.game_id].winner_name,
         game_id: req.params.game_id
       })
+    })
+  }
+})
+
+/* GET log of player kills */
+
+router.get('/:game_id/log', function (req, res, next) {
+  if (module.exports.game_statuses['game_count'] < req.params.game_id || module.exports.game_statuses[req.params.game_id].is_on === 0) {
+    var err = new Error('Not Found')
+    err.status = 404
+    next(err)
+  } else {
+    var db = c.database('game_' + req.params.game_id)
+    db.get('kills', function (err, doc) {
+      if (err) {
+        console.error('Error in section 5317: ' + err.message)
+      } else {
+        var set_array = new Promise(function (resolve, reject) {
+          if (doc.val.length > 1) {
+            res.locals.kills_array = doc.val.reverse() // It is reversed so the most recent kill is at the top of the page
+            resolve('proceed')
+          } else {
+            res.locals.kills_array = doc.val
+            resolve('proceed')
+          }
+        })
+        set_array.then(function (result) {
+          return new Promise(function (resolve, reject) {
+            if (module.exports.game_statuses[req.params.game_id].is_on === 1) {
+              res.locals.game_status = 'on'
+              resolve(result) // I think for chaining promises I have to keep passing along this value
+            } else {
+              res.locals.game_status = 'over'
+              resolve(result)
+            }
+          })
+        }).then(function (result) {
+          res.render('log', {
+            title: 'Log',
+            game_status: res.locals.game_status,
+            game_id: req.params.game_id,
+            kills: res.locals.kills_array
+          })
+        })
+      }
     })
   }
 })
@@ -317,22 +371,27 @@ router.post('/:game_id/signup', function (req, res) {
                 if (err) {
                   console.error('Error in section 7654: ' + err.message)
                 }
-                if (resp.length > 4) { // this is not a value set in stone. I am seriously thinking it would be a good idea to make this a property in the database, choosable when you create your instance.
-                  db.get('game_on', function (err, doc) {
-                    if (err) {
-                      console.error('Error in section 3468: ' + err.message)
-                    } else {
-                      if (doc.countdown === 0) {
-                        module.exports.event_emitter.emit('game_countdown', req.params.game_id)
-                        db.merge('game_on', {countdown: 1}, function (err, doc) {
-                          if (err) {
-                            console.error('Error in section 1241: ' + err.message)
-                          }
-                        })
+                db.get('game_on', function (err, doc) {
+                  if (err) {
+                    console.error('Error in section 6221: ' + err.message)
+                  }
+                  if (resp.length > doc.minimum_player_count - 1) { // this is not a value set in stone. I am seriously thinking it would be a good idea to make this a property in the database, choosable when you create your instance.
+                    db.get('game_on', function (err, doc) {
+                      if (err) {
+                        console.error('Error in section 3468: ' + err.message)
+                      } else {
+                        if (doc.countdown === 0) {
+                          module.exports.event_emitter.emit('game_countdown', req.params.game_id)
+                          db.merge('game_on', {countdown: 1}, function (err, doc) {
+                            if (err) {
+                              console.error('Error in section 1241: ' + err.message)
+                            }
+                          })
+                        }
                       }
-                    }
-                  })
-                }
+                    })
+                  }
+                })
               })
             }
           })
@@ -433,19 +492,20 @@ router.post('/:game_id/report', function (req, res) {
           resp.forEach(function (key, val) {
             if (key === req.body.killer_key && val === req.body.target_key) {
               if (resp.length > 2) { // only execute this block if there are more targets for the killing
-                db.get(val, function (err, response) {
+                db.get(val, function (err, doc) {
                   if (err) {
                     console.error('Error in section 6541: ' + err.message)
                   } else {
-                    db.get(response.target_id, function (err, doc) {
+                    db.get(doc.target_id, function (err, doc) {
                       if (err) {
                         console.error('Error in section 7535: ' + err.message)
                       } else {
+                        console.log('setting new target data')
                         res.locals.new_target_name = doc.name
                         res.locals.new_target_killword = doc.killword
                       }
                     })
-                    db.merge(key, {target_id: response.target_id}, function (err) {
+                    db.merge(key, {target_id: doc.target_id}, function (err) {
                       if (err) {
                         console.error('Error in section 1624: ' + err.message)
                       } else {
@@ -453,6 +513,7 @@ router.post('/:game_id/report', function (req, res) {
                           if (err) {
                             console.error('Error in section 6341: ' + err.message)
                           } else {
+                            console.log('reported, kay')
                             res.locals.page_title = 'Kill Reported'
                             resolve('Kill Reported')
                           }
@@ -472,6 +533,19 @@ router.post('/:game_id/report', function (req, res) {
                   }
                 })
               }
+              db.get(req.body.killer_key, function (err, doc) { // around the time you're rearranging the target data, emit the kill broadcast
+                if (err) {
+                  console.error('error in section 6322: ' + err.message)
+                } else {
+                  db.get(req.body.target_key, function (err, docu) {
+                    if (err) {
+                      console.errror('Error in section 6900: ' + err.message)
+                    } else {
+                      module.exports.event_emitter.emit('kill', {killer: doc.name, victim: docu.name, kill_method: req.body.kill_method, game_id: req.params.game_id}) // Keeping my routing file on the lean side, doing the adjustment of the kills property in bin/www
+                    }
+                  })
+                }
+              })
             } else {
               checked_ids++
               if (checked_ids === resp.length) {
@@ -568,15 +642,26 @@ router.post('/:game_id/leak', function (req, res) {
         if (err) {
           console.error('Error in section 7152: ' + err.message)
         } else {
-          if (resp.length === 1) {
-            module.exports.event_emitter.emit('game_over', req.params.game_id)
-          } else if (res.locals.player_with_new_target !== null) {
-            console.log(res.locals.player_with_new_target)
-            client.sendEmail({
-              'From': 'mailbot@assassins.ga',
-              'To': res.locals.player_with_new_target,
-              'Subject': 'New Target',
-              'TextBody': 'Your previous target has been terminated by their own sponsors for their indiscretion. Your target has changed. Check target information at http://assassins.ga/' + req.params.game_id + '/info'
+          if (result === 'INFORMATION LEAKED') {
+            console.log('result was info leakd')
+            if (resp.length === 1) {
+              module.exports.event_emitter.emit('game_over', req.params.game_id)
+            } else if (res.locals.player_with_new_target !== null) {
+              console.log(res.locals.player_with_new_target)
+              client.sendEmail({
+                'From': 'mailbot@assassins.ga',
+                'To': res.locals.player_with_new_target,
+                'Subject': 'New Target',
+                'TextBody': 'Your previous target has been terminated by their own sponsors for their indiscretion. Your target has changed. Check target information at http://assassins.ga/' + req.params.game_id + '/info'
+              })
+            }
+            db.get(req.body.key, function (err, doc) {
+              if (err) {
+                console.error('Error in section 1124: ' + err.message)
+              } else {
+                console.log('emitting a suicide event')
+                module.exports.event_emitter.emit('kill', {killer: doc.name, victim: null, kill_method: 'suicide', game_id: req.params.game_id})
+              }
             })
           }
         }

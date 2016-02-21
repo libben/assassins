@@ -12,7 +12,7 @@ var cradle = require('cradle')
 var c = new (cradle.Connection)
 var Promise = require('es6-promises')
 var postmark = require('postmark')
-var client = new postmark.Client()
+var client = new postmark.Client('REPLACE')
 var instances_db = c.database('instances')
 /*
  * Get port from environment and store in Express.
@@ -45,90 +45,96 @@ io.on('connection', function (socket) {
   })
 })
 router.event_emitter.on('game_countdown', function (game_id) {
-  var count = 5 // CHANGE
-  var counter = setInterval(function () {
-    io.to(game_id).emit('count_update', count)
-    console.log('emmitted count_update to frontend')
-    count = count - 1
-    if (count < 0) { // I'm saying to do this whent the count is less than zero because when I set it to trigger at (count < 1) the timer disappeared when it showed the number 2.
-      clearInterval(counter)
-      io.to(game_id).emit('game_on')
-      var db = c.database('game_' + game_id)
-      db.merge('game_on', {val: 1, countdown: 0, game_start_time: Date.now()}, function (err, res) {
-        if (err) {
-          console.error('Error at location 4627: ' + err.message)
-        }
-      })
-      instances_db.merge(game_id, {is_game_on: 1}, function (err, res) {
-        if (err) {
-          console.error('Error at location 2736: ' + err.message)
-        } else {
-          router.game_statuses[game_id].is_on = 1 // This setting doesn't have to be done within this loop, but that's what I'm doing
-        }
-      })
-      db.view('all/user_list', function (err, res) {
-        var killword_list = ['Barrack Obama', 'Justin Beiber', 'Donald Trump', 'Hillary Clinton', 'Facebook', 'Batman', 'Wonder Woman', 'New Hampshire', 'Africa', 'Lucky Charms', 'Milky Way', 'South Dakota', 'Darth Vader', 'Kylo Ren', 'Han Solo', 'honey badger', 'Jurassic Park', 'Captain America', 'Instagram', 'Snapchat', 'Twitter', 'Michigan'] // Will stick this into a json file soon, so I can call upon multiple arrays of words
-        if (err) {
-          console.error('Error in section 1468: ' + err.message)
-        } else {
-          var set_killwords = new Promise(function (resolve, reject) {
-            var successful_killword_attributions = 0
-            var id_array = []
-            res.forEach(function (key, val) {
-              var random_number = Math.floor(Math.random() * killword_list.length) // Arrays start at position zero, so I don't need to add a plus 1 at the end here
-              db.merge(key._id, {killword: killword_list[random_number]}, function (err, response) {
-                if (err) {
-                  console.error('Error in section 6541: ' + err.message)
-                } else {
-                  id_array.push(key._id) // simplifies adding my ids to the array
-                  client.sendEmail({
-                    'From': 'mailbot@assassins.ga',
-                    'To': key.email,
-                    'Subject': 'The Game Has Begun',
-                    'TextBody': 'It is time to play. Your access code at http://assassins.ga/' + game_id + ' is ' + key._id
+  var db = c.database('game_' + game_id)
+  db.get('game_on', function (err, doc) {
+    if (err) {
+      console.error('Error in section 6319: ' + err.message)
+    } else {
+      var count = doc.countdown_length
+      var counter = setInterval(function () {
+        io.to(game_id).emit('count_update', count)
+        console.log('emmitted count_update to frontend')
+        count = count - 1
+        if (count < 0) { // I'm saying to do this whent the count is less than zero because when I set it to trigger at (count < 1) the timer disappeared when it showed the number 2.
+          clearInterval(counter)
+          io.to(game_id).emit('game_on')
+          db.merge('game_on', {val: 1, countdown: 0, game_start_time: Date.now()}, function (err, res) {
+            if (err) {
+              console.error('Error at location 4627: ' + err.message)
+            }
+          })
+          instances_db.merge(game_id, {is_game_on: 1}, function (err, res) {
+            if (err) {
+              console.error('Error at location 2736: ' + err.message)
+            } else {
+              router.game_statuses[game_id].is_on = 1 // This setting doesn't have to be done within this loop, but that's what I'm doing
+            }
+          })
+          db.view('all/user_list', function (err, res) {
+            var killword_list = ['Barrack Obama', 'Justin Beiber', 'Donald Trump', 'Hillary Clinton', 'Facebook', 'Batman', 'Wonder Woman', 'New Hampshire', 'Africa', 'Lucky Charms', 'Milky Way', 'South Dakota', 'Darth Vader', 'Kylo Ren', 'Han Solo', 'honey badger', 'Jurassic Park', 'Captain America', 'Instagram', 'Snapchat', 'Twitter', 'Michigan'] // Will stick this into a json file soon, so I can call upon multiple arrays of words
+            if (err) {
+              console.error('Error in section 1468: ' + err.message)
+            } else {
+              var set_killwords = new Promise(function (resolve, reject) {
+                var successful_killword_attributions = 0
+                var id_array = []
+                res.forEach(function (key, val) {
+                  var random_number = Math.floor(Math.random() * killword_list.length) // Arrays start at position zero, so I don't need to add a plus 1 at the end here
+                  db.merge(key._id, {killword: killword_list[random_number]}, function (err, response) {
+                    if (err) {
+                      console.error('Error in section 6541: ' + err.message)
+                    } else {
+                      id_array.push(key._id) // simplifies adding my ids to the array
+                      client.sendEmail({
+                        'From': 'mailbot@assassins.ga',
+                        'To': key.email,
+                        'Subject': 'The Game Has Begun',
+                        'TextBody': 'It is time to play. Your access code at http://assassins.ga/' + game_id + ' is ' + key._id
+                      })
+                      killword_list.splice(random_number, 1) // Removes one element starting at the place dictated by the random number. This ensures no two people get the same killword.
+                      successful_killword_attributions++
+                      if (successful_killword_attributions === res.length) {
+                        resolve(id_array)
+                      }
+                    }
                   })
-                  killword_list.splice(random_number, 1) // Removes one element starting at the place dictated by the random number. This ensures no two people get the same killword.
-                  successful_killword_attributions++
-                  if (successful_killword_attributions === res.length) {
-                    resolve(id_array)
+                })
+              })
+              set_killwords.then(function (output) {
+                for (i = 0; i < output.length - 2; i++) { // Wikipedia says length - 2 is the way you're supposed to do this. No clue why, but it works fine. Credits to Knuth, Fisher, and Yates for the basis for this shuffle
+                  var j = Math.floor(Math.random()*(output.length - i)) // this loop scrambles the array
+                  var original_i = output[i]
+                  output[i] = output[i+j]
+                  output[i+j] = original_i
+                  if (i === output.length - 3) {
+                    return output
                   }
                 }
-              })
-            })
-          })
-          set_killwords.then(function (output) {
-            for (i = 0; i < output.length - 2; i++) { // Wikipedia says length - 2 is the way you're supposed to do this. No clue why, but it works fine. Credits to Knuth, Fisher, and Yates for the basis for this shuffle
-              var j = Math.floor(Math.random()*(output.length - i)) // this loop scrambles the array
-              var original_i = output[i]
-              output[i] = output[i+j]
-              output[i+j] = original_i
-              if (i === output.length - 3) {
-                return output
-              }
-            }
-          }).then(function (output) {
-            merge_last_player = new Promise(function (resolve, reject) {
-              db.merge(output[output.length - 1], { target_id: output[0] }, function (err) {
-                if (err) {
-                  console.error('Error in section 8772: ' + err.message)
-                }
-                resolve('proceed')
-              })
-            })
-            merge_last_player.then(function (result) {
-              for (i = 0; i < output.length - 1; i++) {
-                db.merge(output[i], { target_id: output[i+1] }, function (err) {
-                  if (err) {
-                    console.error('Error in section 9852: ' + err.message)
+              }).then(function (output) {
+                merge_last_player = new Promise(function (resolve, reject) {
+                  db.merge(output[output.length - 1], { target_id: output[0] }, function (err) {
+                    if (err) {
+                      console.error('Error in section 8772: ' + err.message)
+                    }
+                    resolve('proceed')
+                  })
+                })
+                merge_last_player.then(function (result) {
+                  for (i = 0; i < output.length - 1; i++) {
+                    db.merge(output[i], { target_id: output[i+1] }, function (err) {
+                      if (err) {
+                        console.error('Error in section 9852: ' + err.message)
+                      }
+                    })
                   }
                 })
-              }
-            })
+              })
+            }
           })
         }
-      })
+      }, 1000)
     }
-  }, 1000)
+  })
 })
 
 /* Triggers when a game ends */
@@ -162,6 +168,28 @@ router.event_emitter.on('game_over', function (game_id) {
     }
   })
 })
+
+/* Triggers when someone is killed */
+
+router.event_emitter.on('kill', function(data) {
+  var db = c.database('game_' + data.game_id)
+  var killdata = {killer: data.killer, victim: data.victim, kill_method: data.kill_method}
+  db.get('kills', function (err, res) {
+    if (err) {
+      console.error('Error in section 5328: ' + err.message)
+    } else {
+      var existing_kills = res.val
+      existing_kills.push(killdata)
+      db.merge('kills', {val: existing_kills}, function (err) {
+        if (err) {
+          console.error('Error in section 8311: ' + err.message)
+        }
+      })
+    }
+  })
+  io.to(data.game_id).emit('kill', killdata)
+})
+
 /**
  * Listen on provided port, on all network interfaces.
  */
