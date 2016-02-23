@@ -6,5 +6,19 @@ html
       include partials/templates/jsdefaults.jade
       // The Lynda.com guy put jsdefaults at the end of the body. Dunno why; guess if I get a problem I'll put it there.
   body
-    block header
-    block content
+    nav#menu
+      block nav
+    #panel
+      block header
+      #container.container
+        block content
+      block footer
+        #footer
+          .footer-entry.lefty
+            a.white(href='https://twitter.com/DubbsSmacker44')
+              i.fa.fa-twitter-square
+          .footer-entry.lefty
+            p Want to chat? 
+              a#mailtome(href='malto:benr@openmailbox.org') Hit me up.
+          .footer-entry.righty
+            p © 2016 Benjamin Rausch. All Rights Reserved.

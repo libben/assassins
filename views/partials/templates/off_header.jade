@@ -1,8 +1,11 @@
-table
-  tr
-    td
-      a(href='/#{game_id}/',class='btn btn-default') Home
-    td
-      a(href='/#{game_id}/signup',class='btn btn-default') Sign Up For Next Game
-    td
-      a(href='/#{game_id}/unregister',class='btn btn-default') Unregister From Next Game
+#header
+  .lefty.menu-bits
+    a.header-entry(href='/#{game_id}/') Home
+  .lefty.menu-bits
+    a.header-entry(href='/#{game_id}/signup') Sign Up For Next Game
+  .lefty.menu-bits
+    a.header-entry(href='/#{game_id}/unregister') Unregister From Next Game
+  .righty.menu-bits
+    p#status the game is: off
+  .righty#menu-hamburger
+    p#toggle-button ☰

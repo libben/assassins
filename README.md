@@ -12,7 +12,7 @@ Start your CouchDB server, go to your project directory, then fire up your Node.
 `DEBUG=Assassins:* npm start`
 
 ### Known bugs:
-rarely the db at creation phase results in a 412
+none
 
 ### Notes:
 Jade doesn't like being asked to conditionally extend templates. Check out streaming build systems; see if this project would benefit from them.
@@ -44,7 +44,7 @@ How much time between criteria for game start being met and the game actually st
 
 - BIG STEP: create live feed of kills with sockets :) > it may also log a game-start event at the beginning of the game. [COMPLETE, NO GAME START EVENT CURRENTLY]
 - set up email-based authentication for people signing up to the game.
-- create a front-end to speak of
+- create a front-end to speak of [WORKING ON IT]
 - [NEXT RELEASE (DEVELOPMENT FURTHER THAN THIS POINT IS UNKNOWN)]
 
 Tidbit: if info needs to be sent to ONE socket, check out the default room documentation on socket.io's site; each new socket joins a room named after its id.

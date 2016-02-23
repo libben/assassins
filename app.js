@@ -4,36 +4,7 @@ var logger = require('morgan') // logs requests to console. Remove when publishi
 var cookieParser = require('cookie-parser') // I'm leaving these alone for now.
 var bodyParser = require('body-parser')
 var router = require('./routes/index') // Gives us a variable to link as the source of our routes.
-var cradle = require('cradle')
-var c = new (cradle.Connection)
 var app = express()
-
-// Create necessary database on startup if it doesn't exist already
-var instances_database = c.database('instances')
-instances_database.exists(function (err, exists) {
-  if (err) {
-    console.log('Checking if there was an instances database threw an error.')
-  } else if (!exists) {
-    instances_database.create()
-    instances_database.save('game_counter', {
-      val: 0
-    }, function (err, res) {
-      if (err) {
-        console.log('Creating an instances_database threw an error.')
-      }
-    })
-    instances_database.save('_design/all', {
-      views: {
-        ids_and_emails: {
-          map: 'function(doc) { if (doc.email) { emit(doc._id, doc.email) } }'
-        },
-        ids_and_metadata: {
-          map: 'function(doc) {if (doc.is_game_on !== undefined) { emit(doc._id, { is_on: doc.is_game_on, winner_name: doc.winner_name } ) } }' // This is like this because just checking if the parameter exists doesn't work with documents with game_on set to 'false'
-        }
-      }
-    })
-  }
-})
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'))

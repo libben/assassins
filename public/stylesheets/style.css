@@ -1,9 +1,191 @@
 @import url('https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css');
-#c { /* Countdown Text on "query.html"*/
-  font-size: 4em;
-  font-family: courier,monospace;
-  margin-top: -10px;
+body {
+  width: 100%;
+  height: 100%;
 }
-#problem {
-  background-color: red;
+html {
+  height: 100%;
+}
+.slideout-menu {
+  position: fixed;
+  left: auto;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 0;
+  width: 256px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: none;
+}
+p#problem {
+  background-color: #ff4747;
+  padding: 20px 0px 20px 20px;
+}
+#kills {
+  list-style-type: none;
+  width: 380px;
+  margin-top: 20px;
+}
+.method {
+  display: inline-block;
+  width: 40px;
+}
+.flavor {
+  display: inline-block;
+  width: 50px;
+  color: #9c9c9c;
+}
+.name {
+  display: inline-block;
+  width: 110px;
+}
+li {
+  margin-left: -40px;
+  font-size: 16px;
+}
+
+a.header-entry {
+  padding: 19px 20px 18px 20px;
+  color: white;
+  text-decoration: none;
+}
+a.header-entry:hover {
+  background-color: #c28ae0;
+  text-decoration: none;
+  color: white;
+}
+a.header-entry.current-page {
+  background-color: #c28ae0;
+}
+.nav-li {
+  display: block;
+  width: 100%;
+}
+#header {
+  white-space: nowrap;
+  top: 0px;
+  height: 52px;
+  padding: 16px 16px 16px 16px;
+  background-color: #9e46ce;
+}
+
+/* Alternate color schemes */
+/*
+#over-header {
+  background-color: #8a8a8a;
+}
+#on-header {
+  background-color: #75fd63;
+}
+*/
+
+p#status {
+  vertical-align: middle;
+  display: inline;
+  padding: 16px 20px 18px 20px;
+  font-style: italic;
+  color: white;
+}
+p#nav-status {
+  font-style: italic;
+  color: white;
+  padding: 15px 15px 15px 15px;
+}
+
+div.lefty {
+  float: left;
+}
+div.righty {
+  float: right;
+}
+div#panel {
+  height: 100%;
+  background-color: white;
+}
+#menu-hamburger {
+  display: none;
+}
+#toggle-button {
+  vertical-align: middle;
+  display: inline;
+  padding: 16px 20px 18px 20px;
+  font-style: italic;
+  color: white;
+}
+#toggle-button:hover {
+  cursor: pointer;
+  cursor: hand;
+}
+#nokills {
+  padding-top: 20px;
+}
+@media screen and (max-width: 768px) {
+  .menu-bits {
+    display: none;
+  }
+  #menu-hamburger {
+    display: block;
+  }
+}
+.slideout-open,
+.slideout-open body,
+.slideout-open .slideout-panel {
+  overflow: hidden;
+}
+.slideout-open .slideout-menu {
+  display: block;
+}
+#nav-ul {
+  background-color: #9e46ce;
+  height: 100%;
+  width: 256px;
+  list-style-type: none;
+  margin-bottom: 0px;
+}
+a.nav-entry {
+  display: block;
+  color: white;
+  text-decoration: none;
+  width: 256px;
+  padding: 15px 15px 15px 15px;
+}
+a.nav-entry:hover {
+  background-color: #c28ae0;
+  text-decoration: none;
+  color: white;
+  width: 256px;
+}
+.nav-entry.current-page {
+  background-color: #c28ae0;
+}
+.tips {
+  color: #9c9c9c;
+}
+#footer {
+  position: fixed;
+  z-index: 1;
+  height: 40px;
+  background-color: #9e46ce;
+  width: 100%;
+  bottom: 0;
+}
+.footer-entry {
+  padding: 10px 10px 10px 0px;
+  color: white;
+}
+a.white {
+  color: white;
+  padding-left: 30px;
+  padding-right: -3px;
+}
+#mailtome {
+  color: white;
+}
+a.white:hover {
+  color: white;
+  text-decoration: none;
+}
+#container {
+  margin-bottom: 56px;
 }

@@ -4,29 +4,54 @@ var cradle = require('cradle')
 var events = require('events')
 module.exports.event_emitter = new events.EventEmitter()
 var c = new (cradle.Connection)
-var instances_db = c.database('instances')
 var Promise = require('es6-promises')
 var postmark = require('postmark')
 var client = new postmark.Client('REPLACE')
 module.exports.game_statuses = {'game_count': 0} // In case the instances database doesn't exist when the server starts up, this ensures requests made to /:game_id/ of any kind still 404 when no game databases exist
 
-instances_db.view('all/ids_and_metadata', function (err, res) { // Sets the above object to have list of live instances of the game, coupled with their game_on status.
+// Creates instances database if it doesn't exist. Also pushes metadata to module.exports.games_statuses. Migrated from app.js because of cosmetic errors being thrown.
+c.database('instances').exists(function (err, exists) {
   if (err) {
-    console.error('Error in section 5242: ' + err.message)
+    console.log('Checking if there was an instances database threw an error.')
+  } else if (!exists) {
+    c.database('instances').create()
+    c.database('instances').save('game_counter', {
+      val: 0
+    }, function (err, res) {
+      if (err) {
+        console.log('Creating an instances_database threw an error.')
+      }
+    })
+    c.database('instances').save('_design/all', {
+      views: {
+        ids_and_emails: {
+          map: 'function(doc) { if (doc.email) { emit(doc._id, doc.email) } }'
+        },
+        ids_and_metadata: {
+          map: 'function(doc) {if (doc.is_game_on !== undefined) { emit(doc._id, { is_on: doc.is_game_on, winner_name: doc.winner_name } ) } }' // This is like this because just checking if the parameter exists doesn't work with documents with game_on set to 'false'
+        }
+      }
+    })
   } else {
-    res.forEach(function (key, row) {
-      module.exports.game_statuses[key] = {is_on: row.is_on, winner_name: row.winner_name}
+    c.database('instances').view('all/ids_and_metadata', function (err, res) { // Sets the above object to have list of live instances of the game, coupled with their game_on status.
+      if (err) {
+        console.error('Error in section 5242: ' + err.message)
+      } else {
+        res.forEach(function (key, row) {
+          module.exports.game_statuses[key] = {is_on: row.is_on, winner_name: row.winner_name}
+        })
+      }
+    })
+    c.database('instances').get('game_counter', function (err, doc) {
+      if (err) {
+        console.error('Error in section 8761: ' + err.message)
+      } else {
+        module.exports.game_statuses['game_count'] = doc.val // Sets this object property to the total number of games upon server startup
+      }
     })
   }
 })
 
-instances_db.get('game_counter', function (err, doc) {
-  if (err) {
-    console.error('Error in section 8761: ' + err.message)
-  } else {
-    module.exports.game_statuses['game_count'] = doc.val // Sets this object property to the total number of games upon server startup
-  }
-})
 /* GET home page. */
 router.get('/', function (req, res) {
   res.render('creator', {
@@ -41,7 +66,7 @@ router.post('/', function (req, res) {
   res.locals.err = null // replace these properties of the app with database calls?
   res.locals.new_game_id = null // This is null at the start. I don't want it to show up as undefined down the road and give me a hassle. It will only be called upon if the new game database is successfully created.
   var check_for_validity = new Promise(function (resolve, reject) {
-    instances_db.view('all/ids_and_emails', function (err, resp) { // REMEMBER: 'res' is what we call the response for the entire route. Any responses given while retrieving the route must be given different names.
+    c.database('instances').view('all/ids_and_emails', function (err, resp) { // REMEMBER: 'res' is what we call the response for the entire route. Any responses given while retrieving the route must be given different names.
       if (err) {
         reject(err.message)
       } else if (!(/^[a-z0-9\._-]{1,63}@[a-z0-9_-]{1,63}\.[a-z\.]{1,63}$/.test(req.body.email.toLowerCase().trim()))) {
@@ -69,18 +94,18 @@ router.post('/', function (req, res) {
   })
   check_for_validity.then(function (result) {
     return new Promise(function (resolve, reject) {
-      instances_db.get('game_counter', function (err, doc) {
+      c.database('instances').get('game_counter', function (err, doc) {
         if (err) {
           console.error('Error: ' + err.message)
         }
         var number_of_games = Number(doc.val) + 1
-        instances_db.merge('game_counter', {val: number_of_games}, function (err, resp) {
+        c.database('instances').merge('game_counter', {val: number_of_games}, function (err, resp) {
           if (err) {
             console.error('Error in section 9909: ' + err.message)
             res.locals.err = 'unknown'
           }
         })
-        instances_db.save(String(number_of_games), { // saves metadata about each running game instance as a document in the 'instances' database
+        c.database('instances').save(String(number_of_games), { // saves metadata about each running game instance as a document in the 'instances' database
           email: req.body.email.toLowerCase().trim(),
           is_game_on: 0,
           winner_name: null // Perhaps I'll add a field to measure when the games begin for easy referral, but not now
@@ -382,11 +407,6 @@ router.post('/:game_id/signup', function (req, res) {
                       } else {
                         if (doc.countdown === 0) {
                           module.exports.event_emitter.emit('game_countdown', req.params.game_id)
-                          db.merge('game_on', {countdown: 1}, function (err, doc) {
-                            if (err) {
-                              console.error('Error in section 1241: ' + err.message)
-                            }
-                          })
                         }
                       }
                     })
@@ -468,6 +488,7 @@ router.get('/:game_id/report', function (req, res) {
   } else {
     res.render('report', {
       title: 'Report a Kill',
+      winner_name: null,
       game_id: req.params.game_id
     })
   }
@@ -476,6 +497,7 @@ router.post('/:game_id/report', function (req, res) {
   if (module.exports.game_statuses[req.params.game_id].is_on !== 1) {
     res.redirect('/' + req.params.game_id)
   } else {
+    res.locals.winner_name = null
     res.locals.error = null
     res.locals.new_target_name = null
     res.locals.new_target_killword = null
@@ -513,7 +535,6 @@ router.post('/:game_id/report', function (req, res) {
                           if (err) {
                             console.error('Error in section 6341: ' + err.message)
                           } else {
-                            console.log('reported, kay')
                             res.locals.page_title = 'Kill Reported'
                             resolve('Kill Reported')
                           }
@@ -527,9 +548,16 @@ router.post('/:game_id/report', function (req, res) {
                   if (err) {
                     console.error('Error in section 7463: ' + err.message)
                   } else {
-                    module.exports.event_emitter.emit('game_over', req.params.game_id)
-                    res.locals.page_title = 'You Win!'
-                    resolve('You Win!')
+                    db.get(key, function (err, doc) {
+                      if (err) {
+                        console.error('Error in section 6532: ' + err.message)
+                      } else {
+                        res.locals.winner_name = doc.name
+                        module.exports.event_emitter.emit('game_over', req.params.game_id)
+                        res.locals.page_title = 'You Win!'
+                        resolve('You Win!')
+                      }
+                    })
                   }
                 })
               }
@@ -561,6 +589,7 @@ router.post('/:game_id/report', function (req, res) {
       res.render('report', {
         title: res.locals.page_title,
         error: res.locals.error,
+        winner_name: res.locals.winner_name,
         new_target_name: res.locals.new_target_name,
         new_target_killword: res.locals.new_target_killword,
         game_id: req.params.game_id
@@ -569,24 +598,26 @@ router.post('/:game_id/report', function (req, res) {
   }
 })
 /* GET leak page. */
-router.get('/:game_id/leak', function (req, res) {
+router.get('/:game_id/suicide', function (req, res) {
   if (module.exports.game_statuses[req.params.game_id].is_on !== 1) {
     res.redirect('/' + req.params.game_id)
   } else {
-    res.render('leak', {
-      title: 'LEAK INFORMATION',
+    res.render('suicide', {
+      title: 'Commit Suicide',
+      winner_name: null,
       game_id: req.params.game_id
     })
   }
 })
 
 /* POST leak page */
-router.post('/:game_id/leak', function (req, res) {
+router.post('/:game_id/suicide', function (req, res) {
   if (module.exports.game_statuses[req.params.game_id].is_on !== 1) {
     res.redirect('/' + req.params.game_id)
   } else {
+    res.locals.winner_name = null
     res.locals.player_with_new_target = null
-    res.locals.page_title = 'LEAK INFORMATION'
+    res.locals.page_title = 'Commit Suicide'
     res.locals.error = null
     var db = c.database('game_' + req.params.game_id)
     var check_id_validity_and_commit_suicide = new Promise(function (resolve, reject) {
@@ -616,8 +647,8 @@ router.post('/:game_id/leak', function (req, res) {
                             if (err) {
                               console.error('Error in section 6341: ' + err.message)
                             } else {
-                              res.locals.page_title = 'INFORMATION LEAKED'
-                              resolve('INFORMATION LEAKED')
+                              res.locals.page_title = 'Suicide Successful'
+                              resolve('Suicide Successful')
                             }
                           })
                         }
@@ -638,38 +669,52 @@ router.post('/:game_id/leak', function (req, res) {
       })
     })
     check_id_validity_and_commit_suicide.then(function (result) {
-      db.view('all/alive_user_ids_and_target_ids', function (err, resp) {
-        if (err) {
-          console.error('Error in section 7152: ' + err.message)
-        } else {
-          if (result === 'INFORMATION LEAKED') {
-            console.log('result was info leakd')
-            if (resp.length === 1) {
-              module.exports.event_emitter.emit('game_over', req.params.game_id)
-            } else if (res.locals.player_with_new_target !== null) {
-              console.log(res.locals.player_with_new_target)
-              client.sendEmail({
-                'From': 'mailbot@assassins.ga',
-                'To': res.locals.player_with_new_target,
-                'Subject': 'New Target',
-                'TextBody': 'Your previous target has been terminated by their own sponsors for their indiscretion. Your target has changed. Check target information at http://assassins.ga/' + req.params.game_id + '/info'
-              })
-            }
-            db.get(req.body.key, function (err, doc) {
-              if (err) {
-                console.error('Error in section 1124: ' + err.message)
-              } else {
-                console.log('emitting a suicide event')
-                module.exports.event_emitter.emit('kill', {killer: doc.name, victim: null, kill_method: 'suicide', game_id: req.params.game_id})
+      return new Promise(function (resolve, reject) {
+        db.view('all/alive_user_ids_and_target_ids', function (err, resp) {
+          if (err) {
+            console.error('Error in section 7152: ' + err.message)
+          } else {
+            if (result === 'Suicide Successful') {
+              if (resp.length === 1) {
+                resp.forEach(function (key, val) {
+                  db.get(key, function (err, doc) { // acquires name of winner to show in rendered view
+                    if (err) {
+                      console.eror('Error in section 6211: ' + err.message)
+                    } else {
+                      res.locals.winner_name = doc.name
+                      module.exports.event_emitter.emit('game_over', req.params.game_id)
+                      resolve(result)
+                    }
+                  })
+                })
+              } else if (res.locals.player_with_new_target !== null) {
+                resolve(result) // I'm resolving at the beginning because I don't need to make sure this email goes through before I render
+                client.sendEmail({
+                  'From': 'mailbot@assassins.ga',
+                  'To': res.locals.player_with_new_target,
+                  'Subject': 'New Target',
+                  'TextBody': 'Your previous target has committed suicide. Your target has changed. Check target information at http://assassins.ga/' + req.params.game_id + '/info'
+                })
               }
-            })
+              db.get(req.body.key, function (err, doc) {
+                if (err) {
+                  console.error('Error in section 1124: ' + err.message)
+                } else {
+                  module.exports.event_emitter.emit('kill', {killer: doc.name, victim: null, kill_method: 'suicide', game_id: req.params.game_id})
+                }
+              })
+            } else {
+              resolve(result)
+            }
           }
-        }
-      })
-      res.render('leak', {
-        title: res.locals.page_title,
-        error: res.locals.error,
-        game_id: req.params.game_id
+        })
+      }).then(function (result) {
+        res.render('suicide', {
+          title: res.locals.page_title,
+          error: res.locals.error,
+          winner_name: res.locals.winner_name,
+          game_id: req.params.game_id
+        })
       })
     })
   }

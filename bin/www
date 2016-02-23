@@ -46,6 +46,11 @@ io.on('connection', function (socket) {
 })
 router.event_emitter.on('game_countdown', function (game_id) {
   var db = c.database('game_' + game_id)
+  db.merge('game_on', {countdown: 1}, function (err, res) {
+    if (err) {
+      console.error('Error in section 1241: ' + err.message)
+    }
+  })
   db.get('game_on', function (err, doc) {
     if (err) {
       console.error('Error in section 6319: ' + err.message)
@@ -53,9 +58,8 @@ router.event_emitter.on('game_countdown', function (game_id) {
       var count = doc.countdown_length
       var counter = setInterval(function () {
         io.to(game_id).emit('count_update', count)
-        console.log('emmitted count_update to frontend')
         count = count - 1
-        if (count < 0) { // I'm saying to do this whent the count is less than zero because when I set it to trigger at (count < 1) the timer disappeared when it showed the number 2.
+        if (count < 0) { // I'm saying to do this when the count is less than zero because when I set it to trigger at (count < 1) the timer disappeared when it showed the number 2.
           clearInterval(counter)
           io.to(game_id).emit('game_on')
           db.merge('game_on', {val: 1, countdown: 0, game_start_time: Date.now()}, function (err, res) {
@@ -71,7 +75,7 @@ router.event_emitter.on('game_countdown', function (game_id) {
             }
           })
           db.view('all/user_list', function (err, res) {
-            var killword_list = ['Barrack Obama', 'Justin Beiber', 'Donald Trump', 'Hillary Clinton', 'Facebook', 'Batman', 'Wonder Woman', 'New Hampshire', 'Africa', 'Lucky Charms', 'Milky Way', 'South Dakota', 'Darth Vader', 'Kylo Ren', 'Han Solo', 'honey badger', 'Jurassic Park', 'Captain America', 'Instagram', 'Snapchat', 'Twitter', 'Michigan'] // Will stick this into a json file soon, so I can call upon multiple arrays of words
+            var killword_list = ['Barrack Obama', 'Justin Bieber', 'Ted Cruz', 'Donald Trump', 'Hillary Clinton', 'Facebook', 'Batman', 'Wonder Woman', 'New Hampshire', 'Africa', 'Lucky Charms', 'Milky Way', 'South Dakota', 'Darth Vader', 'Kylo Ren', 'Han Solo', 'honey badger', 'George Clooney', 'Peyton Manning', 'Mike Trout', 'Jurassic Park', 'Captain America', 'prime rib', 'Matt Damon', 'Leonardo DiCaprio', 'My Little Pony', 'West Virginia', 'Instagram', 'Snapchat', 'Twitter', 'Michigan'] // Will stick this into a json file soon, so I can call upon multiple arrays of words
             if (err) {
               console.error('Error in section 1468: ' + err.message)
             } else {

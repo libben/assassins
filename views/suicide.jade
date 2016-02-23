@@ -10,18 +10,13 @@ block header
         p#status= 'the game is: over. ' + winner_name + ' has won!'
   else
     include partials/templates/on_header.jade
-block content                                                                                                                  
+block content
   h1= title
-  if title === 'Kill Reported'
-    h3 Kill recorded. Your new target is:
-    h3= new_target_name
-    h3 Their killword is:
-    h3= new_target_killword
-  else if title === 'You Win!'
-    h2 Congratulations! You are the winner of Assassins!
+  if (page_title === 'Suicide Successful')
+    p You have successfully committed suicide.
   else
     if error === 'key_not_found'
       include partials/content/notfoundproblem.jade
-    else if error === 'unknown'
+    else if error === 'unknown' 
       include partials/content/unknownproblem.jade
-    include partials/content/killreportform.jade
+    include partials/content/suicideform.jade
