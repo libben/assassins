@@ -7,8 +7,12 @@ ul#nav-ul
     a.nav-entry(href='/#{game_id}/report') Report a Kill
   li.nav-li
     a.nav-entry(href='/#{game_id}/suicide') Suicide
+  if (kill_log !== 'false')
+    li.nav-li
+      a.nav-entry(href='/#{game_id}/log') Kill Log
   li.nav-li
-    a.nav-entry(href='/#{game_id}/log') Kill Log
-  li.nav-li
-    p#nav-status the game is: on
+    p#nav-status.nav-status the game is: on
+  if (live_player_count !== 'false')
+    li.nav-li
+      p#nav-player-count.nav-status= live_player_count + ' players are alive' 
 

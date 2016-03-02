@@ -3,3 +3,4 @@ npm-debug.log
 *.swp
 *.swo
 .tern-project
+node_modules

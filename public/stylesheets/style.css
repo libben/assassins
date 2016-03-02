@@ -53,7 +53,6 @@ a.header-entry {
 a.header-entry:hover {
   background-color: #c28ae0;
   text-decoration: none;
-  color: white;
 }
 a.header-entry.current-page {
   background-color: #c28ae0;
@@ -67,6 +66,7 @@ a.header-entry.current-page {
   top: 0px;
   height: 52px;
   padding: 16px 16px 16px 16px;
+  /* change this back to other one */
   background-color: #9e46ce;
 }
 
@@ -80,19 +80,22 @@ a.header-entry.current-page {
 }
 */
 
-p#status {
+p.status {
   vertical-align: middle;
   display: inline;
   padding: 16px 20px 18px 20px;
   font-style: italic;
   color: white;
 }
-p#nav-status {
+p.nav-status {
   font-style: italic;
   color: white;
-  padding: 15px 15px 15px 15px;
+  padding: 15px 15px 12px 15px;
 }
 
+p.number {
+  text-indent: 15px;
+}
 div.lefty {
   float: left;
 }
@@ -136,6 +139,9 @@ div#panel {
 .slideout-open .slideout-menu {
   display: block;
 }
+#nav-player-count {
+  padding-top: 5px;
+}
 #nav-ul {
   background-color: #9e46ce;
   height: 100%;
@@ -152,8 +158,6 @@ a.nav-entry {
 }
 a.nav-entry:hover {
   background-color: #c28ae0;
-  text-decoration: none;
-  color: white;
   width: 256px;
 }
 .nav-entry.current-page {

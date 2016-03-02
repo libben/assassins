@@ -1,4 +1,7 @@
 extends layout
+block nav
+  if (winner_name === null)
+    include partials/templates/on_nav.jade
 block header
   if (winner_name !== null)
     #header
@@ -7,7 +10,7 @@ block header
       .lefty
         a.header-entry(href='/#{game_id}/log') Kill Log
       .righty
-        p#status= 'the game is: over. ' + winner_name + ' has won!'
+        p#status.status= 'the game is: over. ' + winner_name + ' has won!'
   else
     include partials/templates/on_header.jade
 block content

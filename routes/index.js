@@ -12,14 +12,14 @@ module.exports.game_statuses = {'game_count': 0} // In case the instances databa
 // Creates instances database if it doesn't exist. Also pushes metadata to module.exports.games_statuses. Migrated from app.js because of cosmetic errors being thrown.
 c.database('instances').exists(function (err, exists) {
   if (err) {
-    console.log('Checking if there was an instances database threw an error.')
+    console.error('Checking if there was an instances database threw an error: ' + err.message)
   } else if (!exists) {
     c.database('instances').create()
     c.database('instances').save('game_counter', {
       val: 0
     }, function (err, res) {
       if (err) {
-        console.log('Creating an instances_database threw an error.')
+        console.error('Creating an instances_database threw an error: ' + err.message)
       }
     })
     c.database('instances').save('_design/all', {
@@ -28,7 +28,7 @@ c.database('instances').exists(function (err, exists) {
           map: 'function(doc) { if (doc.email) { emit(doc._id, doc.email) } }'
         },
         ids_and_metadata: {
-          map: 'function(doc) {if (doc.is_game_on !== undefined) { emit(doc._id, { is_on: doc.is_game_on, winner_name: doc.winner_name } ) } }' // This is like this because just checking if the parameter exists doesn't work with documents with game_on set to 'false'
+          map: 'function(doc) {if (doc.is_game_on !== undefined) { emit(doc._id, { is_on: doc.is_game_on, winner_name: doc.winner_name, kill_log: doc.kill_log, live_player_count: doc.live_player_count } ) } }' // This is like this because just checking if the parameter exists doesn't work with documents with game_on set to 'false'
         }
       }
     })
@@ -38,7 +38,7 @@ c.database('instances').exists(function (err, exists) {
         console.error('Error in section 5242: ' + err.message)
       } else {
         res.forEach(function (key, row) {
-          module.exports.game_statuses[key] = {is_on: row.is_on, winner_name: row.winner_name}
+          module.exports.game_statuses[key] = {is_on: row.is_on, winner_name: row.winner_name, kill_log: row.kill_log, live_player_count: row.live_player_count}
         })
       }
     })
@@ -71,9 +71,9 @@ router.post('/', function (req, res) {
         reject(err.message)
       } else if (!(/^[a-z0-9\._-]{1,63}@[a-z0-9_-]{1,63}\.[a-z\.]{1,63}$/.test(req.body.email.toLowerCase().trim()))) {
         reject('not_an_email')
-      } else if (!(/^\d{1,4}$/.test(req.body.minimum_player_count))) { // if the number of players isn't a number or is too long, reject it
+      } else if (!(/^\d{1,3}$/.test(req.body.minimum_player_count))) { // if the number of players isn't a number or is too long, reject it
         reject('invalid_player_count')
-      } else if (!(/^\d{1,5}$/.test(req.body.countdown_length))) { // if the number of players isn't a number or is too long, reject it
+      } else if (!(/^\d{1,6}$/.test(req.body.countdown_length))) { // if the number of players isn't a number or is too long, reject it
         reject('invalid_countdown_length')
       } else if (resp.length === 0) {
         resolve('proceed')
@@ -108,6 +108,8 @@ router.post('/', function (req, res) {
         c.database('instances').save(String(number_of_games), { // saves metadata about each running game instance as a document in the 'instances' database
           email: req.body.email.toLowerCase().trim(),
           is_game_on: 0,
+          kill_log: req.body.kill_log,
+          live_player_count: req.body.live_player_count,
           winner_name: null // Perhaps I'll add a field to measure when the games begin for easy referral, but not now
         }, function (err, resp) {
           if (err) {
@@ -159,7 +161,9 @@ router.post('/', function (req, res) {
         if (res.locals.err === null) {
           res.locals.new_game_id = number_of_games
           module.exports.game_statuses[number_of_games] = {} // If I don't declare it's an object, when I try to set a property for it, it tells me it can't set the property of undefined.
-          module.exports.game_statuses[number_of_games].is_on = 0 // This should have been set elsewhere surprised it wasn't already
+          module.exports.game_statuses[number_of_games].is_on = 0
+          module.exports.game_statuses[number_of_games].kill_log = req.body.kill_log
+          module.exports.game_statuses[number_of_games].live_player_count = req.body.live_player_count
           module.exports.game_statuses['game_count'] = number_of_games
           resolve('Success')
         }
@@ -196,58 +200,16 @@ router.get('/:game_id', function (req, res, next) {
         resolve('over')
       }
     })
+    console.log(module.exports.game_statuses[req.params.game_id].live_player_count)
     promise.then(function (result) {
       res.render('landing', {
         title: 'Landing Page',
         game_status: result,
         winner_name: module.exports.game_statuses[req.params.game_id].winner_name,
+        kill_log: module.exports.game_statuses[req.params.game_id].kill_log,
+        live_player_count: module.exports.game_statuses[req.params.game_id].live_player_count,
         game_id: req.params.game_id
       })
-    })
-  }
-})
-
-/* GET log of player kills */
-
-router.get('/:game_id/log', function (req, res, next) {
-  if (module.exports.game_statuses['game_count'] < req.params.game_id || module.exports.game_statuses[req.params.game_id].is_on === 0) {
-    var err = new Error('Not Found')
-    err.status = 404
-    next(err)
-  } else {
-    var db = c.database('game_' + req.params.game_id)
-    db.get('kills', function (err, doc) {
-      if (err) {
-        console.error('Error in section 5317: ' + err.message)
-      } else {
-        var set_array = new Promise(function (resolve, reject) {
-          if (doc.val.length > 1) {
-            res.locals.kills_array = doc.val.reverse() // It is reversed so the most recent kill is at the top of the page
-            resolve('proceed')
-          } else {
-            res.locals.kills_array = doc.val
-            resolve('proceed')
-          }
-        })
-        set_array.then(function (result) {
-          return new Promise(function (resolve, reject) {
-            if (module.exports.game_statuses[req.params.game_id].is_on === 1) {
-              res.locals.game_status = 'on'
-              resolve(result) // I think for chaining promises I have to keep passing along this value
-            } else {
-              res.locals.game_status = 'over'
-              resolve(result)
-            }
-          })
-        }).then(function (result) {
-          res.render('log', {
-            title: 'Log',
-            game_status: res.locals.game_status,
-            game_id: req.params.game_id,
-            kills: res.locals.kills_array
-          })
-        })
-      }
     })
   }
 })
@@ -379,7 +341,7 @@ router.post('/:game_id/signup', function (req, res) {
             method_of_death: null,
             killer: null,
             killword: null,
-            target_id: null // the alive: true thing will change from being the default when I implement email verification
+            target_id: null // the alive: true thing will change from being the default if I implement email verification
           }, function (err, resp) {
             if (err) {
               console.error('Error in section 1212: ' + err.message)
@@ -390,7 +352,7 @@ router.post('/:game_id/signup', function (req, res) {
                 'Subject': 'Sign-Up Successful',
                 'TextBody': 'You have successfully signed up for Assassins. Should you decide you no longer wish to play, your key to unregister is ' + res.locals.unreg_key + ', which you can input at http://assassins.ga/' + req.params.game_id + '/unregister'
               })
-              res.locals.page_title = 'Sign-Up Has Completed!'
+              res.locals.page_title = 'You Have Signed Up!'
               resolve('proceed')
               db.view('all/user_list', function (err, resp) { // If there are 10 people signed up, start the countdown to the beginning of the game.
                 if (err) {
@@ -400,7 +362,7 @@ router.post('/:game_id/signup', function (req, res) {
                   if (err) {
                     console.error('Error in section 6221: ' + err.message)
                   }
-                  if (resp.length > doc.minimum_player_count - 1) { // this is not a value set in stone. I am seriously thinking it would be a good idea to make this a property in the database, choosable when you create your instance.
+                  if (resp.length > doc.minimum_player_count - 1) {
                     db.get('game_on', function (err, doc) {
                       if (err) {
                         console.error('Error in section 3468: ' + err.message)
@@ -429,6 +391,7 @@ router.post('/:game_id/signup', function (req, res) {
     })
   }
 })
+
 // Routes when the game is on
 router.get('/:game_id/info', function (req, res) {
   if (module.exports.game_statuses[req.params.game_id].is_on !== 1) {
@@ -436,6 +399,8 @@ router.get('/:game_id/info', function (req, res) {
   } else {
     res.render('info', {
       title: 'Target Information',
+      kill_log: module.exports.game_statuses[req.params.game_id].kill_log,
+      live_player_count: module.exports.game_statuses[req.params.game_id].live_player_count,
       game_id: req.params.game_id // I had more here but I deleted it. Dunno what it was left over from. If you see this comment later in time, go ahead and delete it
     })
   }
@@ -476,6 +441,8 @@ router.post('/:game_id/info', function (req, res) {
         target_name: res.locals.target_name,
         target_killword: res.locals.target_killword,
         error: res.locals.error,
+        kill_log: module.exports.game_statuses[req.params.game_id].kill_log,
+        live_player_count: module.exports.game_statuses[req.params.game_id].live_player_count,
         game_id: req.params.game_id
       })
     }, null)
@@ -489,6 +456,8 @@ router.get('/:game_id/report', function (req, res) {
     res.render('report', {
       title: 'Report a Kill',
       winner_name: null,
+      kill_log: module.exports.game_statuses[req.params.game_id].kill_log,
+      live_player_count: module.exports.game_statuses[req.params.game_id].live_player_count,
       game_id: req.params.game_id
     })
   }
@@ -592,6 +561,8 @@ router.post('/:game_id/report', function (req, res) {
         winner_name: res.locals.winner_name,
         new_target_name: res.locals.new_target_name,
         new_target_killword: res.locals.new_target_killword,
+        kill_log: module.exports.game_statuses[req.params.game_id].kill_log,
+        live_player_count: module.exports.game_statuses[req.params.game_id].live_player_count,
         game_id: req.params.game_id
       })
     })
@@ -605,6 +576,8 @@ router.get('/:game_id/suicide', function (req, res) {
     res.render('suicide', {
       title: 'Commit Suicide',
       winner_name: null,
+      kill_log: module.exports.game_statuses[req.params.game_id].kill_log,
+      live_player_count: module.exports.game_statuses[req.params.game_id].live_player_count,
       game_id: req.params.game_id
     })
   }
@@ -713,10 +686,62 @@ router.post('/:game_id/suicide', function (req, res) {
           title: res.locals.page_title,
           error: res.locals.error,
           winner_name: res.locals.winner_name,
+          kill_log: module.exports.game_statuses[req.params.game_id].kill_log,
+          live_player_count: module.exports.game_statuses[req.params.game_id].live_player_count,
           game_id: req.params.game_id
         })
       })
     })
   }
 })
+
+/* GET log of player kills */
+
+router.get('/:game_id/log', function (req, res, next) {
+  if (module.exports.game_statuses['game_count'] < req.params.game_id || module.exports.game_statuses[req.params.game_id].is_on === 0) {
+    var err = new Error('Not Found')
+    err.status = 404
+    next(err)
+  } else if (module.exports.game_statuses[req.params.game_id].kill_log === false) {
+    res.redirect('/' + req.params.game_id)
+  } else {
+    var db = c.database('game_' + req.params.game_id)
+    db.get('kills', function (err, doc) {
+      if (err) {
+        console.error('Error in section 5317: ' + err.message)
+      } else {
+        var set_array = new Promise(function (resolve, reject) {
+          if (doc.val.length > 1) {
+            res.locals.kills_array = doc.val.reverse() // It is reversed so the most recent kill is at the top of the page
+            resolve('proceed')
+          } else {
+            res.locals.kills_array = doc.val
+            resolve('proceed')
+          }
+        })
+        set_array.then(function (result) {
+          return new Promise(function (resolve, reject) {
+            if (module.exports.game_statuses[req.params.game_id].is_on === 1) {
+              res.locals.game_status = 'on'
+              resolve(result) // I think for chaining promises I have to keep passing along this value
+            } else {
+              res.locals.game_status = 'over'
+              resolve(result)
+            }
+          })
+        }).then(function (result) {
+          res.render('log', {
+            title: 'Log',
+            game_status: res.locals.game_status,
+            game_id: req.params.game_id,
+            kill_log: true,
+            live_player_count: module.exports.game_statuses[req.params.game_id].live_player_count,
+            kills: res.locals.kills_array
+          })
+        })
+      }
+    })
+  }
+})
+
 module.exports.routes = router

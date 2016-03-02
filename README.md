@@ -12,7 +12,7 @@ Start your CouchDB server, go to your project directory, then fire up your Node.
 `DEBUG=Assassins:* npm start`
 
 ### Known bugs:
-none
+if a game changes status from off to on, starting the game, and someone changes their window size so the hamburger kicks in, the hamburger won't work until they reload their page
 
 ### Notes:
 Jade doesn't like being asked to conditionally extend templates. Check out streaming build systems; see if this project would benefit from them.
@@ -24,28 +24,18 @@ The live kill feed may one day be merged into a portion of the landing page.
 I made kills part of a document of its own to avoid document update conflicts when the game is ending.
 
 ### To-do:
-- make routes that shouldn't be accessed redirect to the landing page instead of 404'ing [COMPLETE]
-- create email server, set up sending out of unregistration id at sign-up and actual ID at game start [COMPLETE]
-- force inputs to match regex patterns [COMPLETE]
-- make each input in the forms on the various views display on a new line [COMPLETE]
-- [ALPHA RELEASE]
 - add a favicon.ico
-- insert options for each site instance in the create-a-site form...
-
-what language of kill-words do you want?
-
-How complex?
-
-What kill modes are available?
-
-How many people needed to start game? [COMPLETE]
-
-How much time between criteria for game start being met and the game actually starting? [COMPLETE] 
-
+- add instructions on how the game works; it wasn't clear for someone I tested the game with. [COMPLETE]
+- modular set of kill words -- movies, video games, Bible, famous people, default, simple words, complex words
+- allow range of kill options to include upon one's choice
+- make kill log optional [COMPLETE]
+- option of having a counter displaying how many people are still alive [COMPLETE]
+- option of a page listing who is still in the game
+- option to whitelist only certain emails to be able to sign up
+- email blacklist option
+- range of people -- if input is [5, 10] start long timer when 5 players are signed-up, and the actual countdown one at the end of that, or trigger the countdown immediately if 10 players sign up before the long timer winds down
 - BIG STEP: create live feed of kills with sockets :) > it may also log a game-start event at the beginning of the game. [COMPLETE, NO GAME START EVENT CURRENTLY]
 - set up email-based authentication for people signing up to the game.
-- create a front-end to speak of [WORKING ON IT]
-- [NEXT RELEASE (DEVELOPMENT FURTHER THAN THIS POINT IS UNKNOWN)]
 
 Tidbit: if info needs to be sent to ONE socket, check out the default room documentation on socket.io's site; each new socket joins a room named after its id.
 Other tidbit: if you need something special, socket.io-redis and socket.io-emitter are pretty neat!

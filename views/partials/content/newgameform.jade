@@ -10,7 +10,20 @@ form.form-horizontal(action='/',method='post')
   .form-group
     label.col-sm-2.control-label(for='countdown_length') How many seconds should the countdown to the game's start be?
     .col-sm-3
-      input#minimum_player_count.form-control(type='number',name='countdown_length')
+      input#countdown_length.form-control(type='number',name='countdown_length')
   .form-group
+    label.col-sm-2.control-label(for='kill_log') Should we display a live feed of all kills?
+    .col-sm-3
+      select#kill_log.form-control(name='kill_log')
+        option(value='true') Yes
+        option(value='false') No
+  .form-group
+    label.col-sm-2.control-label(for='live_player_count') Should we give an account of how many players are alive at any given time?
+    .col-sm-3
+      select#kill_log.form-control(name='live_player_count')
+        //- Remember to convert this true value to the number of players when the game starts
+        option(value='true') Yes
+        option(value='false') No
+    .form-group
     .col-sm-offset-2.col-sm-3
       input(type='submit',class='btn btn-default',value='Submit')

@@ -57,11 +57,14 @@ router.event_emitter.on('game_countdown', function (game_id) {
     } else {
       var count = doc.countdown_length
       var counter = setInterval(function () {
+        console.log('emitted count_update')
         io.to(game_id).emit('count_update', count)
         count = count - 1
-        if (count < 0) { // I'm saying to do this when the count is less than zero because when I set it to trigger at (count < 1) the timer disappeared when it showed the number 2.
+        // I'm saying to do this when the count is less than zero because when I set it to trigger at (count < 1) the timer disappeared when it showed the number 2.
+        if (count < 0) {
           clearInterval(counter)
-          io.to(game_id).emit('game_on')
+          // properties that can be accessed from the front end are explicitly declared; otherwise there would be a security lapse in which a client could view any facet of the game document
+          io.to(game_id).emit('game_on', {kill_log: doc.kill_log, live_player_count: doc.live_player_count})
           db.merge('game_on', {val: 1, countdown: 0, game_start_time: Date.now()}, function (err, res) {
             if (err) {
               console.error('Error at location 4627: ' + err.message)
@@ -75,7 +78,12 @@ router.event_emitter.on('game_countdown', function (game_id) {
             }
           })
           db.view('all/user_list', function (err, res) {
-            var killword_list = ['Barrack Obama', 'Justin Bieber', 'Ted Cruz', 'Donald Trump', 'Hillary Clinton', 'Facebook', 'Batman', 'Wonder Woman', 'New Hampshire', 'Africa', 'Lucky Charms', 'Milky Way', 'South Dakota', 'Darth Vader', 'Kylo Ren', 'Han Solo', 'honey badger', 'George Clooney', 'Peyton Manning', 'Mike Trout', 'Jurassic Park', 'Captain America', 'prime rib', 'Matt Damon', 'Leonardo DiCaprio', 'My Little Pony', 'West Virginia', 'Instagram', 'Snapchat', 'Twitter', 'Michigan'] // Will stick this into a json file soon, so I can call upon multiple arrays of words
+            // Will stick this into a json file soon, so I can call upon multiple arrays of words
+            var killword_list = ['Barrack Obama', 'Santa Claus', 'Justin Bieber', 'Ted Cruz', 'Donald Trump', 'Hillary Clinton', 'vista', 'Facebook', 'Batman', 'New Hampshire', 'Africa', 'Lucky Charms', 'Milky Way', 'South Dakota', 'Darth Vader', 'Kylo Ren', 'Han Solo', 'honey badger', 'George Clooney', 'Peyton Manning', 'Mike Trout', 'Jurassic Park', 'prime rib', 'Matt Damon', 'Leonardo DiCaprio', 'My Little Pony', 'West Virginia', 'Instagram', 'Snapchat', 'Twitter', 'Michigan']
+            /* var simple_killword_list = ['tiger', 'eagle', 'bacon', 'temple', 'salmon', 'igloo', 'swimming pool', 'eraser']
+            var comic_book_killword_list = ['Iron Man', 'Captain America', 'Thor', 'Batman', 'Wonder Woman', 'Beast Boy', 'Robin', 'Spiderman', 'Wolverine', 'Starfire', 'Doctor Octopus', 'Superman', 'Lex Luthor', 'Lois Lane', 'Doomsday', 'Doctor Doom', 'The Joker', 'Mr. Freeze', 'The Flash', 'Green Arrow', 'Clark Kent']
+            var movie_killword_list = ['Titanic', 'Avatar', 'Pulp Fiction', 'Gone with the Wind', 'Citizen Kane', 'Vertigo', 'Shawshank Redemption', 'Ben Hur', 'Psycho', 'Inception', '2001: A Space Odyssey']
+            var book_killword_list = ['The Bible', 'The Koran', 'The Great Gatsby', 'War and Peace', 'East of Eden', 'Atlas Shrugged', 'Slaughterhouse Five', 'Catch 22', 'The Iliad', 'The Odyssey', 'Death of a Salesman', 'To Kill a Mockingbird', 'Jane Eyre', 'The Scarlet Letter', 'The Hunger Games', 'Harry Potter', 'The Lion, the Witch, and the Wardrobe']*/
             if (err) {
               console.error('Error in section 1468: ' + err.message)
             } else {
@@ -83,7 +91,8 @@ router.event_emitter.on('game_countdown', function (game_id) {
                 var successful_killword_attributions = 0
                 var id_array = []
                 res.forEach(function (key, val) {
-                  var random_number = Math.floor(Math.random() * killword_list.length) // Arrays start at position zero, so I don't need to add a plus 1 at the end here
+                  // Arrays start at position zero, so I don't need to add a plus 1 at the end here
+                  var random_number = Math.floor(Math.random() * killword_list.length)
                   db.merge(key._id, {killword: killword_list[random_number]}, function (err, response) {
                     if (err) {
                       console.error('Error in section 6541: ' + err.message)
@@ -93,11 +102,19 @@ router.event_emitter.on('game_countdown', function (game_id) {
                         'From': 'mailbot@assassins.ga',
                         'To': key.email,
                         'Subject': 'The Game Has Begun',
-                        'TextBody': 'It is time to play. Your access code at http://assassins.ga/' + game_id + ' is ' + key._id
+                        'TextBody': 'It is time to play. Your access code at http://assassins.ga/' + game_id + '/info is ' + key._id
                       })
                       killword_list.splice(random_number, 1) // Removes one element starting at the place dictated by the random number. This ensures no two people get the same killword.
                       successful_killword_attributions++
                       if (successful_killword_attributions === res.length) {
+                        if (router.game_statuses[game_id].live_player_count === 'true') {
+                          router.game_statuses[game_id].live_player_count = id_array.length
+                          instances_db.merge(game_id, {live_player_count: id_array.length}, function (err) {
+                            if (err) {
+                              console.error('Error in section 6430: ' + err.message)
+                            }
+                          })
+                        }
                         resolve(id_array)
                       }
                     }
@@ -105,17 +122,17 @@ router.event_emitter.on('game_countdown', function (game_id) {
                 })
               })
               set_killwords.then(function (output) {
-                for (i = 0; i < output.length - 2; i++) { // Wikipedia says length - 2 is the way you're supposed to do this. No clue why, but it works fine. Credits to Knuth, Fisher, and Yates for the basis for this shuffle
-                  var j = Math.floor(Math.random()*(output.length - i)) // this loop scrambles the array
+                for (var i = 0; i < output.length - 2; i++) { // Wikipedia says length - 2 is the way you're supposed to do this. No clue why, but it works fine. Credits to Knuth, Fisher, and Yates for the basis for this shuffle
+                  var j = Math.floor(Math.random() * (output.length - i)) // this loop scrambles the array
                   var original_i = output[i]
-                  output[i] = output[i+j]
-                  output[i+j] = original_i
+                  output[i] = output[i + j]
+                  output[i + j] = original_i
                   if (i === output.length - 3) {
                     return output
                   }
                 }
               }).then(function (output) {
-                merge_last_player = new Promise(function (resolve, reject) {
+                var merge_last_player = new Promise(function (resolve, reject) {
                   db.merge(output[output.length - 1], { target_id: output[0] }, function (err) {
                     if (err) {
                       console.error('Error in section 8772: ' + err.message)
@@ -124,8 +141,8 @@ router.event_emitter.on('game_countdown', function (game_id) {
                   })
                 })
                 merge_last_player.then(function (result) {
-                  for (i = 0; i < output.length - 1; i++) {
-                    db.merge(output[i], { target_id: output[i+1] }, function (err) {
+                  for (var i = 0; i < output.length - 1; i++) {
+                    db.merge(output[ i ], { target_id: output[i + 1] }, function (err) {
                       if (err) {
                         console.error('Error in section 9852: ' + err.message)
                       }
@@ -161,7 +178,9 @@ router.event_emitter.on('game_over', function (game_id) {
           } else {
             io.to(game_id).emit('game_over', doc.name)
             router.game_statuses[game_id].winner_name = doc.name
-            instances_db.merge(game_id, {email: null, is_game_on: null, winner_name: doc.name}, function (err) {
+            router.game_statuses[game_id].game_log = true
+            // Start showing a game log when the game is over
+            instances_db.merge(game_id, {email: null, is_game_on: null, winner_name: doc.name, game_log: true}, function (err) {
               if (err) {
                 console.error('Error in section 2473: ' + err.message)
               }
@@ -175,8 +194,10 @@ router.event_emitter.on('game_over', function (game_id) {
 
 /* Triggers when someone is killed */
 
-router.event_emitter.on('kill', function(data) {
+router.event_emitter.on('kill', function (data) {
   var db = c.database('game_' + data.game_id)
+  // Subtract one from the live_player_count when someone's killed
+  router.game_statuses[data.game_id].live_player_count --
   var killdata = {killer: data.killer, victim: data.victim, kill_method: data.kill_method}
   db.get('kills', function (err, res) {
     if (err) {

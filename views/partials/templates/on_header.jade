@@ -7,9 +7,13 @@
     a.header-entry(href='/#{game_id}/report') Report a Kill
   .lefty.menu-bits
     a.header-entry(href='/#{game_id}/suicide') Suicide
-  .lefty.menu-bits
-    a.header-entry(href='/#{game_id}/log') Kill Log
+  if (kill_log !== 'false')
+    .lefty.menu-bits
+      a.header-entry(href='/#{game_id}/log') Kill Log
   .righty.menu-bits
-    p#status the game is: on
+    p#status.status the game is: on
+  if (live_player_count !== 'false')
+    .righty.menu-bits
+      p#header_player_count.status= live_player_count + ' players are alive' 
   .righty#menu-hamburger
     p#toggle-button ☰
